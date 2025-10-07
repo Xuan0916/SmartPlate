@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\DashboardController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -16,9 +17,9 @@ Route::post('/resend-code', [VerificationController::class, 'resend'])->name('re
 Route::get('/set-password', [VerificationController::class, 'showSetPasswordForm'])->name('set.password.form');
 Route::post('/set-password', [VerificationController::class, 'submitSetPassword'])->name('set.password.submit');
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
