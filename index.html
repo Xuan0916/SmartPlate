@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartPlate | Browse Food Items</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Use icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <h2>SmartPlate</h2>
+        <nav>
+            <ul>
+                <li><a href="#">Inventory</a></li>
+                <li><a href="#">Donation</a></li>
+                <li class="active"><a href="#">Browse Food Items</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main-content">
+        <!-- Top Navbar -->
+        <header class="topnav">
+            <ul>
+                <li><a href="#">Dashboard</a></li>
+                <li><a href="#">Food Inventory</a></li>
+                <li><a href="#">Track and Report</a></li>
+                <li><a href="#">Plan Weekly Meals</a></li>
+            </ul>
+            <div class="nav-icons">
+                <i class="bi bi-bell"></i>
+                <i class="bi bi-person-circle"></i>
+            </div>
+        </header>
+
+        <!-- Page Title -->
+        <section class="page-header">
+            <h1>Browse Food Items</h1>
+        </section>
+
+        <!-- Table Section -->
+        <section class="table-section">
+            <div class="table-card">
+                <div class="table-header">
+                    <h3>Browse Food Items</h3>
+                    <button class="filter-btn"><i class="bi bi-funnel"></i> Filters</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Quantity</th>
+                            <th>Category</th>
+                            <th>Expiry Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Fresh Apples</td>
+                            <td>12 pcs</td>
+                            <td>Fruits</td>
+                            <td>12/10/2025</td>
+                            <td><span class="badge fresh">Fresh</span></td>
+                        </tr>
+                        <tr>
+                            <td>Whole Milk</td>
+                            <td>2 litres</td>
+                            <td>Dairy</td>
+                            <td>13/10/2025</td>
+                            <td><span class="badge soon">Expires Soon</span></td>
+                        </tr>
+                        <tr>
+                            <td>Yogurt Cups</td>
+                            <td>6 cups</td>
+                            <td>Dairy</td>
+                            <td>15/08/2025</td>
+                            <td><span class="badge expired">Expired</span></td>
+                        </tr>
+                        <tr>
+                            <td>Chicken Breast</td>
+                            <td>1.5 kg</td>
+                            <td>Meat</td>
+                            <td>10/10/2025</td>
+                            <td><span class="badge donated">Donated</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p> HELPBIT216G6 © 2025. All rights reserved.</p>
+        </footer>
+    </main>
+
+</body>
+</html>
+
