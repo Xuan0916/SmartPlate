@@ -27,4 +27,15 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+
+
+#test inventory
+
+Route::view('/inventory', 'managefoodinventory.inventory')->name('inventory.page');
+Route::view('/inventory/convert', 'managefoodinventory.convert_donation')->name('inventory.convert');
+
+
+
 require __DIR__.'/auth.php';
+
+
