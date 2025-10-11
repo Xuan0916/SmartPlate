@@ -47,9 +47,11 @@
                         {{-- Header Row --}}
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-lg font-semibold">{{ __('Food Inventory') }}</h3>
-                            <a class="btn btn-primary btn-sm" href="#add-new-item">
+
+                            {{-- ✅ 点击显示/隐藏表单 --}}
+                            <button class="btn btn-primary btn-sm" id="toggleAddForm" type="button">
                                 <i class="bi bi-plus-lg"></i> Add new item
-                            </a>
+                            </button>
                         </div>
 
                         {{-- Table --}}
@@ -94,8 +96,8 @@
                             </table>
                         </div>
 
-                        {{-- Add Item Form --}}
-                        <div id="add-new-item" class="mt-4">
+                        {{-- ✅ Add Item Form（默认隐藏） --}}
+                        <div id="add-new-item" class="mt-4" style="display: none;">
                             <div class="card">
                                 <div class="card-body">
                                     <h6 class="card-title mb-3">{{ __('Add Item') }}</h6>
@@ -139,6 +141,19 @@
             </div>
         </div>
     </div>
+
+    {{-- ✅ Toggle Add Form Script --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleButton = document.getElementById('toggleAddForm');
+            const formSection = document.getElementById('add-new-item');
+
+            toggleButton.addEventListener('click', function() {
+                const isVisible = formSection.style.display === 'block';
+                formSection.style.display = isVisible ? 'none' : 'block';
+            });
+        });
+    </script>
 
     {{-- Bootstrap JS for dismissible alerts --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
