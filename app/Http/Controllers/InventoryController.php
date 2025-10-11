@@ -68,12 +68,20 @@ class InventoryController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'category' => 'nullable|string|max:100', // ✅ 新增 category 验证
             'quantity' => 'required|numeric|min:1',
             'unit' => 'required|string|max:50',
             'expiry_date' => 'nullable|date',
         ]);
 
-        InventoryItem::create($validated);
+        // ✅ 保存包含 category 的数据
+        InventoryItem::create([
+            'name' => $request->name,
+            'category' => $request->category,
+            'quantity' => $request->quantity,
+            'unit' => $request->unit,
+            'expiry_date' => $request->expiry_date,
+        ]);
 
         return redirect()->route('inventory.index')
             ->with('success', 'New item added successfully!');
@@ -88,12 +96,20 @@ class InventoryController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'category' => 'nullable|string|max:100', // ✅ 新增 category 验证
             'quantity' => 'required|numeric|min:1',
             'unit' => 'required|string|max:50',
             'expiry_date' => 'nullable|date',
         ]);
 
-        $item->update($validated);
+        // ✅ 更新包含 category 的数据
+        $item->update([
+            'name' => $request->name,
+            'category' => $request->category,
+            'quantity' => $request->quantity,
+            'unit' => $request->unit,
+            'expiry_date' => $request->expiry_date,
+        ]);
 
         return redirect()->route('inventory.index')
             ->with('success', 'Item updated successfully!');
