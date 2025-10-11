@@ -14,12 +14,8 @@ class InventoryItem extends Model
     protected $table = 'inventory_items';
 
     // ✅ 允许批量写入的字段（防止 MassAssignmentException）
-    protected $fillable = [
-        'name',
-        'quantity',
-        'unit',
-        'expiry_date',
-    ];
+    protected $fillable = ['name', 'category', 'quantity', 'unit', 'expiry_date'];
+
 
     // ✅ 自动类型转换
     protected $casts = [

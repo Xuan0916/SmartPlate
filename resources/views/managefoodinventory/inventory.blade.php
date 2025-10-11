@@ -54,12 +54,13 @@
                             </button>
                         </div>
 
-                        {{-- Table --}}
+                        {{-- ✅ Inventory Table --}}
                         <div class="table-responsive mb-4">
                             <table class="table align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
                                         <th>Item Name</th>
+                                        <th>Category</th> {{-- ✅ 新增 --}}
                                         <th>Quantity</th>
                                         <th>Expiry Date</th>
                                         <th class="text-end">Actions</th>
@@ -69,6 +70,7 @@
                                     @forelse ($items as $item)
                                         <tr>
                                             <td>{{ $item->name }}</td>
+                                            <td>{{ $item->category ?? '-' }}</td> {{-- ✅ 显示分类 --}}
                                             <td>{{ $item->quantity }} {{ $item->unit }}</td>
                                             <td>{{ $item->expiry_date ? $item->expiry_date->format('d/m/Y') : '-' }}</td>
                                             <td class="text-end">
@@ -89,7 +91,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="4" class="text-center text-muted py-3">No items found.</td>
+                                            <td colspan="5" class="text-center text-muted py-3">No items found.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -108,7 +110,24 @@
                                                 <label class="form-label">Item name</label>
                                                 <input type="text" name="name" class="form-control" placeholder="e.g., Milk" required>
                                             </div>
+
+                                            {{-- ✅ 新增分类下拉菜单 --}}
                                             <div class="col-md-3">
+                                                <label class="form-label">Category</label>
+                                                <select name="category" class="form-select" required>
+                                                    <option value="">Select category</option>
+                                                    <option value="Dairy">Dairy</option>
+                                                    <option value="Meat">Meat</option>
+                                                    <option value="Vegetable">Vegetable</option>
+                                                    <option value="Fruit">Fruit</option>
+                                                    <option value="Grain">Grain</option>
+                                                    <option value="Drink">Drink</option>
+                                                    <option value="Snack">Snack</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="col-md-2">
                                                 <label class="form-label">Quantity</label>
                                                 <input type="number" name="quantity" class="form-control" placeholder="e.g., 1" required>
                                             </div>
@@ -127,6 +146,7 @@
                                                 <input type="date" name="expiry_date" class="form-control">
                                             </div>
                                         </div>
+
                                         <div class="mt-3 flex gap-2">
                                             <button class="btn btn-primary btn-sm" type="submit">Save</button>
                                             <button class="btn btn-outline-secondary btn-sm" type="reset">Reset</button>
