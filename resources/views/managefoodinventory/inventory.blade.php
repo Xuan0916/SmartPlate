@@ -8,123 +8,152 @@
 
     <div class="py-12 bg-gray-100">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            {{-- ✅ Success message --}}
-            @if (session('success'))
-                <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-
-            {{-- ✅ Validation errors --}}
-            @if ($errors->any())
-                <div class="alert alert-danger mt-3">
-                    <ul class="mb-0">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                {{-- Header row --}}
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold">{{ __('Food Inventory') }}</h3>
-                    <div class="flex gap-2">
-                        <button class="btn btn-outline-secondary btn-sm" type="button">
-                            <i class="bi bi-funnel"></i> Filters
-                        </button>
-                        <a class="btn btn-primary btn-sm" href="#add-new-item">
-                            <i class="bi bi-plus-lg"></i> Add new item
+            <div class="flex gap-6">
+                {{-- ✅ Sidebar --}}
+                <aside class="w-56 bg-white shadow-sm rounded-lg p-4 border border-gray-200">
+                    <nav class="flex flex-col space-y-2">
+                        <a href="{{ route('inventory.index') }}" 
+                           class="px-3 py-2 rounded-md {{ request()->routeIs('inventory.index') ? 'bg-blue-100 font-semibold text-blue-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                           Inventory
                         </a>
-                    </div>
-                </div>
+                        <a href="{{ route('donation.index') }}"  class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Donation</a>
+                        <a href="#" class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Browse Food Items</a>
+                    </nav>
+                </aside>
 
-                {{-- Table --}}
-                <div class="table-responsive mb-4">
-                    <table class="table align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Item Name</th>
-                                <th>Quantity</th>
-                                <th>Expiry Date</th>
-                                <th class="text-end">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($items as $item)
-                                <tr>
-                                    <td>{{ $item->name }}</td>
-                                    <td>{{ $item->quantity }} {{ $item->unit }}</td>
-                                    <td>{{ $item->expiry_date ? $item->expiry_date->format('d/m/Y') : '-' }}</td>
-                                    <td class="text-end">
-                                        {{-- Delete --}}
-                                        <form action="{{ route('inventory.destroy', $item->id) }}" method="POST" class="inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-link text-danger p-0 m-0"
-                                                onclick="return confirm('Delete this item?')">
-                                                Delete
-                                            </button>
-                                        </form>
-
-                                        {{-- Convert --}}
-                                        <a href="{{ route('inventory.convert.form', $item->id) }}"
-                                            class="text-success ms-2">Convert</a>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">No items found.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                {{-- Add Item Form --}}
-                <div id="add-new-item" class="mt-4">
-                    <div class="card">
-                        <div class="card-body">
-                            <h6 class="card-title mb-3">{{ __('Add Item') }}</h6>
-                            <form method="POST" action="{{ route('inventory.store') }}">
-                                @csrf
-                                <div class="row g-2">
-                                    <div class="col-md-4">
-                                        <label class="form-label">Item name</label>
-                                        <input type="text" name="name" class="form-control" placeholder="e.g., Milk" required>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Quantity</label>
-                                        <input type="number" name="quantity" class="form-control" placeholder="e.g., 1" required>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">Unit</label>
-                                        <select name="unit" class="form-select" required>
-                                            <option>pcs</option>
-                                            <option>packs</option>
-                                            <option>litres</option>
-                                            <option>g</option>
-                                            <option>ml</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Expiry date</label>
-                                        <input type="date" name="expiry_date" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="mt-3 flex gap-2">
-                                    <button class="btn btn-primary btn-sm" type="submit">Save</button>
-                                    <button class="btn btn-outline-secondary btn-sm" type="reset">Reset</button>
-                                </div>
-                            </form>
+                {{-- ✅ Main Content --}}
+                <div class="flex-1">
+                    {{-- Success message --}}
+                    @if (session('success'))
+                        <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                            {{ session('success') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
-                    </div>
-                </div>
+                    @endif
+
+                    {{-- Validation errors --}}
+                    @if ($errors->any())
+                        <div class="alert alert-danger mb-4">
+                            <ul class="mb-0">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    {{-- Card Container --}}
+                    <div class="bg-white shadow-sm sm:rounded-lg p-6">
+                        {{-- Header Row --}}
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold">{{ __('Food Inventory') }}</h3>
+
+                            {{-- ✅ 点击显示/隐藏表单 --}}
+                            <button class="btn btn-primary btn-sm" id="toggleAddForm" type="button">
+                                <i class="bi bi-plus-lg"></i> Add new item
+                            </button>
+                        </div>
+
+                        {{-- Table --}}
+                        <div class="table-responsive mb-4">
+                            <table class="table align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Item Name</th>
+                                        <th>Quantity</th>
+                                        <th>Expiry Date</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse ($items as $item)
+                                        <tr>
+                                            <td>{{ $item->name }}</td>
+                                            <td>{{ $item->quantity }} {{ $item->unit }}</td>
+                                            <td>{{ $item->expiry_date ? $item->expiry_date->format('d/m/Y') : '-' }}</td>
+                                            <td class="text-end">
+                                                {{-- Delete --}}
+                                                <form action="{{ route('inventory.destroy', $item->id) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-link text-danger p-0 m-0"
+                                                        onclick="return confirm('Delete this item?')">
+                                                        Delete
+                                                    </button>
+                                                </form>
+
+                                                {{-- Convert --}}
+                                                <a href="{{ route('inventory.convert.form', $item->id) }}"
+                                                    class="text-success ms-2">Convert</a>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3">No items found.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {{-- ✅ Add Item Form（默认隐藏） --}}
+                        <div id="add-new-item" class="mt-4" style="display: none;">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title mb-3">{{ __('Add Item') }}</h6>
+                                    <form method="POST" action="{{ route('inventory.store') }}">
+                                        @csrf
+                                        <div class="row g-2">
+                                            <div class="col-md-4">
+                                                <label class="form-label">Item name</label>
+                                                <input type="text" name="name" class="form-control" placeholder="e.g., Milk" required>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">Quantity</label>
+                                                <input type="number" name="quantity" class="form-control" placeholder="e.g., 1" required>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label">Unit</label>
+                                                <select name="unit" class="form-select" required>
+                                                    <option>pcs</option>
+                                                    <option>packs</option>
+                                                    <option>litres</option>
+                                                    <option>g</option>
+                                                    <option>ml</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">Expiry date</label>
+                                                <input type="date" name="expiry_date" class="form-control">
+                                            </div>
+                                        </div>
+                                        <div class="mt-3 flex gap-2">
+                                            <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                                            <button class="btn btn-outline-secondary btn-sm" type="reset">Reset</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div> {{-- end card --}}
+                </div> {{-- end main --}}
             </div>
         </div>
     </div>
+
+    {{-- ✅ Toggle Add Form Script --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleButton = document.getElementById('toggleAddForm');
+            const formSection = document.getElementById('add-new-item');
+
+            toggleButton.addEventListener('click', function() {
+                const isVisible = formSection.style.display === 'block';
+                formSection.style.display = isVisible ? 'none' : 'block';
+            });
+        });
+    </script>
 
     {{-- Bootstrap JS for dismissible alerts --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

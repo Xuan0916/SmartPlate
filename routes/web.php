@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\DonationController;
+use App\Http\Controllers\NotificationController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -31,8 +33,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// ✅ Inventory Routes
+// ✅ Inventory + Donation + Notification Routes
 Route::middleware(['auth'])->group(function () {
+
     // Inventory CRUD
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
     Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
@@ -45,6 +48,15 @@ Route::middleware(['auth'])->group(function () {
 
     // 保留旧的测试静态版
     Route::view('/inventory/test', 'managefoodinventory.inventory')->name('inventory.test');
+
+    // ✅ Donation
+    Route::get('/donation', [DonationController::class, 'index'])->name('donation.index');
+    Route::post('/donation/convert', [DonationController::class, 'convert'])->name('donation.convert');
+
+    // ✅ Notifications
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
 });
 
 // Test
