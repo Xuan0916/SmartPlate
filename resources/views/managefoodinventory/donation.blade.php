@@ -50,6 +50,7 @@
                                     <th>Pickup Location</th>
                                     <th>Pickup Duration</th>
                                     <th>Expiry Date</th>
+                                    <th class="text-end">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -65,10 +66,20 @@
                                                 : '-' 
                                             }}
                                         </td>
+                                        <td class="text-end">
+                                            {{-- ✅ Remove Donation 按钮 --}}
+                                            <form action="{{ route('donation.destroy', $donation->id) }}" method="POST" style="display:inline;">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Remove this donation?')">
+                                                    Remove
+                                                </button>
+                                            </form>
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted py-3">
+                                        <td colspan="6" class="text-center text-muted py-3">
                                             No donated items yet.
                                         </td>
                                     </tr>

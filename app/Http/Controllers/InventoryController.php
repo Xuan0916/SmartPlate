@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\InventoryItem;
 use App\Models\Donation;
+use App\Models\Notification;
+use Carbon\Carbon;
 
 class InventoryController extends Controller
 {
@@ -13,7 +15,47 @@ class InventoryController extends Controller
      */
     public function index()
     {
-        // Get all inventory items ordered by expiry date
+        // ✅ 自动检测3天内将过期的物品
+        $today = Carbon::today();
+        $threeDaysLater = $today->copy()->addDays(3);
+
+        // 找出未来3天内即将过期的物品
+        $expiringItems = InventoryItem::whereBetween('expiry_date', [$today, $threeDaysLater])->get();
+
+        foreach ($expiringItems as $item) {
+            // 检查是否已存在相同的“未读提醒”
+            $exists = Notification::where('item_name', $item->name)
+                ->where('message', 'like', '%will expire%')
+                ->where('status', 'new')
+                ->exists();
+
+            // ✅ 检查今天是否已经提醒过该物品
+            $alreadyReminded = Notification::where('item_name', $item->name)
+                ->whereDate('created_at', $today)
+                ->exists();
+
+            // ✅ 仅当未提醒过 且 没有旧的未读提醒 时，创建新通知
+            if (!$exists && !$alreadyReminded) {
+                if ($item->expiry_date) {
+                    $daysLeft = Carbon::parse($item->expiry_date)->diffInDays($today);
+                    $message = $item->name . ' will expire in ' . $daysLeft . ' day' . ($daysLeft > 1 ? 's' : '');
+
+                    try {
+                        Notification::create([
+                            'item_name' => $item->name,
+                            'message' => $message,
+                            'expiry_date' => $item->expiry_date,
+                            'status' => 'new',
+                            'created_at' => now(),
+                        ]);
+                    } catch (\Exception $e) {
+                        \Log::error('❌ Failed to create notification for item ' . $item->name . ': ' . $e->getMessage());
+                    }
+                }
+            }
+        }
+
+        // ✅ 正常显示库存物品
         $items = InventoryItem::orderBy('expiry_date', 'asc')->get();
 
         return view('managefoodinventory.inventory', compact('items'));
@@ -90,7 +132,7 @@ class InventoryController extends Controller
             'pickup_duration' => 'required|string|max:255',
         ]);
 
-        // Create new donation entry
+        // ✅ 创建新的 Donation 记录
         Donation::create([
             'item_name' => $item->name,
             'quantity' => $item->quantity,
@@ -100,7 +142,7 @@ class InventoryController extends Controller
             'pickup_duration' => $validated['pickup_duration'],
         ]);
 
-        // Remove from inventory after converting
+        // ✅ 转换成功后删除库存项
         $item->delete();
 
         return redirect()->route('inventory.index')
