@@ -29,9 +29,13 @@ class InventoryController extends Controller
                 ->where('status', 'new')
                 ->exists();
 
-            // 如果不存在，就新增一条通知
-            if (!$exists) {
-                // ✅ 确保 expiry_date 不为 null 且为有效日期
+            // ✅ 检查今天是否已经提醒过该物品
+            $alreadyReminded = Notification::where('item_name', $item->name)
+                ->whereDate('created_at', $today)
+                ->exists();
+
+            // ✅ 仅当未提醒过 且 没有旧的未读提醒 时，创建新通知
+            if (!$exists && !$alreadyReminded) {
                 if ($item->expiry_date) {
                     $daysLeft = Carbon::parse($item->expiry_date)->diffInDays($today);
                     $message = $item->name . ' will expire in ' . $daysLeft . ' day' . ($daysLeft > 1 ? 's' : '');
@@ -128,7 +132,7 @@ class InventoryController extends Controller
             'pickup_duration' => 'required|string|max:255',
         ]);
 
-        // Create new donation entry
+        // ✅ 创建新的 Donation 记录
         Donation::create([
             'item_name' => $item->name,
             'quantity' => $item->quantity,
@@ -138,7 +142,7 @@ class InventoryController extends Controller
             'pickup_duration' => $validated['pickup_duration'],
         ]);
 
-        // Remove from inventory after converting
+        // ✅ 转换成功后删除库存项
         $item->delete();
 
         return redirect()->route('inventory.index')

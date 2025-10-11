@@ -7,99 +7,76 @@
     </x-slot>
 
     <div class="py-12 bg-gray-100">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 flex gap-6">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             
-            {{-- ✅ Sidebar --}}
-            <aside class="w-56 bg-white shadow-sm rounded-lg p-4 border border-gray-200">
-                <nav class="flex flex-col space-y-2">
-                    <a href="{{ route('inventory.index') }}" 
-                       class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">
-                       Inventory
-                    </a>
-                    <a href="{{ route('donation.index') }}" 
-                       class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">
-                       Donation
-                    </a>
-                    <a href="{{ route('notifications.index') }}" 
-                       class="px-3 py-2 rounded-md bg-blue-100 font-semibold text-blue-700">
-                       Notifications
-                    </a>
-                </nav>
-            </aside>
-
-            {{-- ✅ Main content --}}
-            <div class="flex-1">
-
-                {{-- ✅ Success Message --}}
-                @if (session('success'))
-                    <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                @endif
-
-                {{-- ✅ Header --}}
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <h5 class="mb-0">Notifications</h5>
-
-                    <form method="POST" action="{{ route('notifications.readAll') }}">
-                        @csrf
-                        <button class="btn btn-primary btn-sm" type="submit">
-                            Mark all as read
-                        </button>
-                    </form>
+            {{-- ✅ Success Message --}}
+            @if (session('success'))
+                <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
+            @endif
 
-                {{-- ✅ Table --}}
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead class="table-light">
+            {{-- ✅ Header --}}
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="mb-0">Notifications</h5>
+
+                <form method="POST" action="{{ route('notifications.readAll') }}">
+                    @csrf
+                    <button class="btn btn-primary btn-sm" type="submit">
+                        Mark all as read
+                    </button>
+                </form>
+            </div>
+
+            {{-- ✅ Table --}}
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Status</th>
+                                <th>Message</th>
+                                <th>Date</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($notifications as $note)
                                 <tr>
-                                    <th>Status</th>
-                                    <th>Message</th>
-                                    <th>Date</th>
-                                    <th class="text-end">Action</th>
+                                    <td>
+                                        @if ($note->status === 'new')
+                                            <span class="badge bg-danger">NEW</span>
+                                        @else
+                                            <span class="badge bg-secondary">READ</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <strong>{{ $note->item_name }}</strong> — {{ $note->message }}
+                                    </td>
+                                    <td>
+                                        {{ $note->expiry_date ? \Carbon\Carbon::parse($note->expiry_date)->format('d/m/Y') : '-' }}
+                                    </td>
+                                    <td class="text-end">
+                                        @if ($note->status === 'new')
+                                            <form method="POST" action="{{ route('notifications.read', $note->id) }}" style="display:inline;">
+                                                @csrf
+                                                <button class="btn btn-link p-0 text-success">Mark as read</button>
+                                            </form>
+                                        @endif
+                                        <a href="{{ route('inventory.index') }}" class="ms-2 text-decoration-none">
+                                            Go to inventory
+                                        </a>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($notifications as $note)
-                                    <tr>
-                                        <td>
-                                            @if ($note->status === 'new')
-                                                <span class="badge bg-danger">NEW</span>
-                                            @else
-                                                <span class="badge bg-secondary">READ</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <strong>{{ $note->item_name }}</strong> — {{ $note->message }}
-                                        </td>
-                                        <td>
-                                            {{ $note->expiry_date ? \Carbon\Carbon::parse($note->expiry_date)->format('d/m/Y') : '-' }}
-                                        </td>
-                                        <td class="text-end">
-                                            @if ($note->status === 'new')
-                                                <form method="POST" action="{{ route('notifications.read', $note->id) }}" style="display:inline;">
-                                                    @csrf
-                                                    <button class="btn btn-link p-0 text-success">Mark as read</button>
-                                                </form>
-                                            @endif
-                                            <a href="{{ route('inventory.index') }}" class="ms-2 text-decoration-none">
-                                                Go to inventory
-                                            </a>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="4" class="text-center text-muted py-3">No notifications found.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">No notifications found.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
-
             </div>
         </div>
     </div>
