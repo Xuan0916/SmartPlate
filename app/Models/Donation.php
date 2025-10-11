@@ -9,9 +9,6 @@ class Donation extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
         'item_name',
         'quantity',
@@ -19,12 +16,5 @@ class Donation extends Model
         'expiry_date',
         'pickup_location',
         'pickup_duration',
-    ];
-
-    /**
-     * Cast expiry_date as a Carbon (date) object.
-     */
-    protected $casts = [
-        'expiry_date' => 'date',
     ];
 }

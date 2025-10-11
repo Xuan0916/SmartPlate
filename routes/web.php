@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\DonationController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -45,6 +46,9 @@ Route::middleware(['auth'])->group(function () {
 
     // 保留旧的测试静态版
     Route::view('/inventory/test', 'managefoodinventory.inventory')->name('inventory.test');
+
+    Route::get('/donation', [DonationController::class, 'index'])->name('donation.index');
+    Route::post('/donation/convert', [DonationController::class, 'convert'])->name('donation.convert');
 });
 
 // Test
