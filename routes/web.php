@@ -52,6 +52,8 @@ Route::middleware(['auth'])->group(function () {
     // ✅ Donation
     Route::get('/donation', [DonationController::class, 'index'])->name('donation.index');
     Route::post('/donation/convert', [DonationController::class, 'convert'])->name('donation.convert');
+    Route::delete('/donation/{id}', [DonationController::class, 'destroy'])->name('donation.destroy');
+
 
     // ✅ Notifications
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
