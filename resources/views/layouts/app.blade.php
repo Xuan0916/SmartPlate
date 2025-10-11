@@ -19,6 +19,7 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+
         <link rel="shortcut icon" href="{{asset('assets/image/SmartPlate.png')}}" type="image/x-icon">
 
     </head>

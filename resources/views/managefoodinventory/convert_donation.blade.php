@@ -1,49 +1,89 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>Convert to donation</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body { background:#fafafa; }
-    .page { max-width:880px; margin:48px auto; }
-  </style>
-</head>
-<body>
-  <div class="page">
-    <h2 class="mb-4">Convert to donation</h2>
+{{-- resources/views/managefoodinventory/convert_donation.blade.php --}}
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Convert to Donation') }}
+        </h2>
+    </x-slot>
 
-    <!-- NOTE:
-         - The item name below is a placeholder.
-         - When backend is added, inject the real item name here.
-    -->
-    <p class="lead">
-      Are you sure you want to convert <strong>Milk</strong> to donation?
-    </p>
+    <div class="py-12" style="background:#fafafa;">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
 
-    <div class="card">
-      <div class="card-body">
-        <!-- Form is static for now; action/method will be added later -->
-        <div class="mb-3">
-          <label class="form-label">Pickup Location</label>
-          <input class="form-control" placeholder="Enter pickup location (e.g., Lobby A)" />
-          <!-- TIP: This will be a required field later in backend validation -->
+                {{-- ✅ Success Message (after redirect) --}}
+                @if (session('success'))
+                    <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                        {{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+
+                {{-- ✅ Validation Errors --}}
+                @if ($errors->any())
+                    <div class="alert alert-danger mb-4">
+                        <ul class="mb-0">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+                
+                {{-- Page intro text --}}
+                <p class="text-lg mb-4">
+                    {{ __('Are you sure you want to convert') }}
+                    <strong>{{ $item->name ?? 'Sample Item' }}</strong>
+                    {{ __('to donation?') }}
+                </p>
+
+                {{-- ✅ Form section --}}
+                <form method="POST" action="{{ route('donation.convert') }}">
+                    @csrf
+
+                    {{-- Hidden field to pass the selected item ID --}}
+                    <input type="hidden" name="item_id" value="{{ $item->id }}">
+
+                    {{-- Pickup Location --}}
+                    <div class="mb-3">
+                        <label class="form-label">{{ __('Pickup Location') }}</label>
+                        <input 
+                            type="text"
+                            name="pickup_location"
+                            class="form-control"
+                            placeholder="{{ __('Enter pickup location (e.g., Lobby A)') }}"
+                            required
+                        />
+                    </div>
+
+                    {{-- Pickup Duration --}}
+                    <div class="mb-4">
+                        <label class="form-label">{{ __('Pickup Duration') }}</label>
+                        <input 
+                            type="datetime-local"
+                            name="pickup_duration"
+                            class="form-control"
+                            required
+                        />
+                        {{-- Example: User can select “2025-10-12T14:00” --}}
+                    </div>
+
+                    {{-- Action buttons --}}
+                    <div class="d-flex gap-2">
+                        {{-- Cancel: redirect back to inventory --}}
+                        <a class="btn btn-outline-secondary" href="{{ route('inventory.index') }}">
+                            {{ __('Cancel') }}
+                        </a>
+
+                        {{-- Confirm Convert --}}
+                        <button class="btn btn-primary" type="submit">
+                            {{ __('Convert') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-
-        <div class="mb-4">
-          <label class="form-label">Pickup Duration</label>
-          <input class="form-control" placeholder="Enter available time (e.g., Today 2–5 PM)" />
-          <!-- TIP: You can switch to a select or date-time range later -->
-        </div>
-
-        <div class="d-flex gap-2">
-          <!-- Cancel: go back to inventory list -->
-          <a class="btn btn-outline-secondary" href="inventory.blade.php">Cancel</a>
-          <!-- Convert: submit later; now just a visual button -->
-          <button class="btn btn-primary" type="button">Convert</button>
-        </div>
-      </div>
     </div>
-  </div>
-</body>
-</html>
+
+    {{-- ✅ Bootstrap JS for alert dismissal --}}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</x-app-layout>
