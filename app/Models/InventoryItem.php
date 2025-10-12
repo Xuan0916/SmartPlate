@@ -14,7 +14,7 @@ class InventoryItem extends Model
     protected $table = 'inventory_items';
 
     // ✅ 允许批量写入的字段（防止 MassAssignmentException）
-    protected $fillable = ['name', 'category', 'quantity', 'unit', 'expiry_date'];
+    protected $fillable = ['name', 'category', 'quantity', 'unit', 'expiry_date','user_id','status',];
 
 
     // ✅ 自动类型转换
@@ -29,6 +29,11 @@ class InventoryItem extends Model
         'updated_at',
         'deleted_at',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     // ✅ 工具函数：检查库存中是否已有相同物品
     public static function existsByName(string $name): bool

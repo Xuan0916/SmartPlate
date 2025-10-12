@@ -10,11 +10,14 @@ class Donation extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'item_name',
+        'category',
         'quantity',
         'unit',
         'expiry_date',
         'pickup_location',
         'pickup_duration',
+        'status',
     ];
 }

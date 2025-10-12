@@ -56,7 +56,11 @@ class InventoryController extends Controller
         }
 
         // ✅ 正常显示库存物品
-        $items = InventoryItem::orderBy('expiry_date', 'asc')->get();
+        $items = InventoryItem::where('user_id', auth()->id())
+            ->orderBy('expiry_date', 'asc')
+            ->with('user')
+            ->get();
+
 
         return view('managefoodinventory.inventory', compact('items'));
     }
@@ -72,6 +76,7 @@ class InventoryController extends Controller
             'quantity' => 'required|numeric|min:1',
             'unit' => 'required|string|max:50',
             'expiry_date' => 'nullable|date',
+            'status' => 'nullable|string|in:available,used,reserved,expired',
         ]);
 
         // ✅ 保存包含 category 的数据
@@ -81,6 +86,8 @@ class InventoryController extends Controller
             'quantity' => $request->quantity,
             'unit' => $request->unit,
             'expiry_date' => $request->expiry_date,
+            'status' => $validated['status'] ?? 'available', // Default status
+            'user_id' => auth()->id(), // ✅ Automatically assign the logged-in user
         ]);
 
         return redirect()->route('inventory.index')

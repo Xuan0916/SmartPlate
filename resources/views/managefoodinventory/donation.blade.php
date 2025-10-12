@@ -50,6 +50,7 @@
                                     <th>Pickup Location</th>
                                     <th>Pickup Duration</th>
                                     <th>Expiry Date</th>
+                                    <th>Status</th>
                                     <th class="text-end">Action</th>
                                 </tr>
                             </thead>
@@ -66,15 +67,45 @@
                                                 : '-' 
                                             }}
                                         </td>
+                                        <td>
+                                            @if ($donation->status === 'available')
+                                                <span class="badge bg-success">Available</span>
+                                            @else
+                                                <span class="badge bg-secondary">Redeemed</span>
+                                            @endif
+                                        </td>
                                         <td class="text-end">
-                                            {{-- ✅ Remove Donation 按钮 --}}
-                                            <form action="{{ route('donation.destroy', $donation->id) }}" method="POST" style="display:inline;">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Remove this donation?')">
-                                                    Remove
-                                                </button>
-                                            </form>
+                                            @php
+                                                $isOwner = Auth::check() && Auth::id() === $donation->user_id;
+                                            @endphp
+
+                                            @if ($donation->status === 'available')
+                                                {{-- ✅ If the user is NOT the owner → show Redeem button --}}
+                                                @unless ($isOwner)
+                                                    <form action="{{ route('donation.redeem', $donation->id) }}" method="POST" style="display:inline;">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-outline-success btn-sm"
+                                                            onclick="return confirm('Do you confirm you want to redeem this item?')">
+                                                            Redeem
+                                                        </button>
+                                                    </form>
+                                                @endunless
+
+                                                {{-- ✅ If the user IS the owner → show Remove button --}}
+                                                @if ($isOwner)
+                                                    <form action="{{ route('donation.destroy', $donation->id) }}" method="POST" style="display:inline;">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                            onclick="return confirm('Remove this donation?')">
+                                                            Remove
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            @else
+                                                {{-- ✅ Show disabled Redeemed button --}}
+                                                <button class="btn btn-secondary btn-sm" disabled>Redeemed</button>
+                                            @endif
                                         </td>
                                     </tr>
                                 @empty

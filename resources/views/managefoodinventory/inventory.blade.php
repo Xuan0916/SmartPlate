@@ -63,6 +63,7 @@
                                         <th>Category</th> {{-- ✅ 新增 --}}
                                         <th>Quantity</th>
                                         <th>Expiry Date</th>
+                                        <th>Status</th>
                                         <th class="text-end">Actions</th>
                                     </tr>
                                 </thead>
@@ -73,6 +74,17 @@
                                             <td>{{ $item->category ?? '-' }}</td> {{-- ✅ 显示分类 --}}
                                             <td>{{ $item->quantity }} {{ $item->unit }}</td>
                                             <td>{{ $item->expiry_date ? $item->expiry_date->format('d/m/Y') : '-' }}</td>
+                                            <td>
+                                                @if ($item->status === 'available')
+                                                    <span class="badge bg-success">Available</span>
+                                                @elseif ($item->status === 'used')
+                                                    <span class="badge bg-secondary">Used</span>
+                                                @elseif ($item->status === 'reserved')
+                                                    <span class="badge bg-warning text-dark">Reserved</span>
+                                                @elseif ($item->status === 'expired')
+                                                    <span class="badge bg-danger text-dark">Expired</span>
+                                                @endif
+                                            </td>
                                             <td class="text-end">
                                                 {{-- Delete --}}
                                                 <form action="{{ route('inventory.destroy', $item->id) }}" method="POST" class="inline">
@@ -91,7 +103,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="text-center text-muted py-3">No items found.</td>
+                                            <td colspan="6" class="text-center text-muted py-3">No items found.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
