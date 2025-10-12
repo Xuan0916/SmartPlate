@@ -53,6 +53,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/donation', [DonationController::class, 'index'])->name('donation.index');
     Route::post('/donation/convert', [DonationController::class, 'convert'])->name('donation.convert');
     Route::delete('/donation/{id}', [DonationController::class, 'destroy'])->name('donation.destroy');
+    Route::post('/donations/{id}/redeem', [DonationController::class, 'redeem'])
+    ->name('donation.redeem')
+    ->middleware('auth');
+
+
 
 
     // ✅ Notifications

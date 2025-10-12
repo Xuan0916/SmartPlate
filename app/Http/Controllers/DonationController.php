@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Donation;
 use App\Models\InventoryItem;
 use App\Models\Notification;
+use Illuminate\Support\Facades\Auth;
 
 class DonationController extends Controller
 {
@@ -29,10 +30,13 @@ class DonationController extends Controller
 
         // ✅ 创建 Donation 记录
         Donation::create([
+            'user_id' => Auth::id(),
             'item_name' => $item->name,
+            'category' => $item->category,
             'quantity' => $item->quantity,
             'unit' => $item->unit,
             'expiry_date' => $item->expiry_date,
+            'status' => 'available',
             'pickup_location' => $request->pickup_location,
             'pickup_duration' => $request->pickup_duration,
         ]);
@@ -95,4 +99,35 @@ class DonationController extends Controller
         return redirect()->route('donation.index')
             ->with('success', 'Donation removed and item returned to inventory.');
     }
+
+    public function redeem($id)
+    {
+        $donation = Donation::findOrFail($id);
+
+        // ✅ Check if already redeemed
+        if ($donation->status === 'redeemed') {
+            return redirect()->back()->with('error', 'This item has already been redeemed.');
+        }
+
+        // ✅ Update donation status and assign to current user
+        $donation->update([
+            'status' => 'redeemed',
+            'user_id' => Auth::id(),
+        ]);
+
+        // ✅ Add the item to the user's inventory
+        InventoryItem::create([
+            'user_id' => Auth::id(),
+            'name' => $donation->item_name,
+            'category' => $donation->category,
+            'quantity' => $donation->quantity,
+            'unit' => $donation->unit,
+            'expiry_date' => $donation->expiry_date,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->back()->with('success', 'Item successfully redeemed and added to your inventory!');
+    }
+
 }
