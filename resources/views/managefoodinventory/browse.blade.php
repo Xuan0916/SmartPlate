@@ -28,6 +28,39 @@
                         <h3 class="text-lg font-semibold">{{ __('Available Food Items') }}</h3>
                     </div>
 
+                    {{-- ✅ Filter Form --}}
+                    <form method="GET" action="{{ route('browse.index') }}" class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <select name="type" class="form-select">
+                                <option value="">All Sources</option>
+                                <option value="inventory" {{ request('type') == 'inventory' ? 'selected' : '' }}>My Inventory</option>
+                                <option value="donation" {{ request('type') == 'donation' ? 'selected' : '' }}>Donations</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <select name="category" class="form-select">
+                                <option value="">All Categories</option>
+                                <option value="Dairy" {{ request('category') == 'Dairy' ? 'selected' : '' }}>Dairy</option>
+                                <option value="Meat" {{ request('category') == 'Meat' ? 'selected' : '' }}>Meat</option>
+                                <option value="Vegetable" {{ request('category') == 'Vegetable' ? 'selected' : '' }}>Vegetable</option>
+                                <option value="Fruit" {{ request('category') == 'Fruit' ? 'selected' : '' }}>Fruit</option>
+                                <option value="Grain" {{ request('category') == 'Grain' ? 'selected' : '' }}>Grain</option>
+                                <option value="Drink" {{ request('category') == 'Drink' ? 'selected' : '' }}>Drink</option>
+                                <option value="Snack" {{ request('category') == 'Snack' ? 'selected' : '' }}>Snack</option>
+                                <option value="Other" {{ request('category') == 'Other' ? 'selected' : '' }}>Other</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <input type="date" name="expiry_date" class="form-control" value="{{ request('expiry_date') }}">
+                        </div>
+
+                        <div class="col-md-2">
+                            <button class="btn btn-primary w-100" type="submit">Filter</button>
+                        </div>
+                    </form>
+
                     {{-- ✅ Browse Table --}}
                     <div class="table-responsive">
                         <table class="table align-middle mb-0">
@@ -68,8 +101,30 @@
                                             @endif
                                         </td>
                                         <td class="text-end">
-                                           
+                                           {{-- Mark as Used --}}
+                                            @if ($item->status !== 'used' && $item->status !== 'redeemed')
+                                                <form action="{{ route('inventory.markUsed', $item->id) }}" method="POST" style="display:inline-block;">
+                                                    @csrf
+                                                    @method('PUT')
+                                                    <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                                        onclick="return confirm('Are you sure you want to mark this item as used?')">
+                                                        Mark as Used
+                                                    </button>
+                                                </form>
+                                            @endif
 
+                                            {{-- Plan for Meal --}}
+                                            @if ($item->status !== 'reserved' && $item->status !== 'used' && $item->status !== 'redeemed')
+                                                <form action="{{ route('inventory.planMeal', $item->id) }}" method="POST" style="display:inline-block;">
+                                                    @csrf
+                                                    @method('PUT')
+                                                    <button type="submit" class="btn btn-outline-warning btn-sm"
+                                                        onclick="return confirm('Do you want to reserve this item for a meal?')">
+                                                        Plan for Meal
+                                                    </button>
+                                                </form>
+                                            @endif
+                                            
                                             {{-- Convert to Donation --}}
                                             @if ($item->status !== 'used' && $item->status !== 'redeemed')
                                                 <a href="{{ route('inventory.convert.form', $item->id) }}" class="text-success ms-2">
