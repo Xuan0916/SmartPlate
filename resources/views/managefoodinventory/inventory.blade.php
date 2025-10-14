@@ -17,7 +17,7 @@
                            Inventory
                         </a>
                         <a href="{{ route('donation.index') }}"  class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Donation</a>
-                        <a href="#" class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Browse Food Items</a>
+                        <a href="{{route('browse.index')}}" class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Browse Food Items</a>
                     </nav>
                 </aside>
 
