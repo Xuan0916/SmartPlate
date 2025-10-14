@@ -11,9 +11,15 @@ class BrowseController extends Controller
 {
     public function index(Request $request)
     {
+        // ✅ Show only your own inventory items
         $queryInventory = InventoryItem::where('user_id', Auth::id());
-        $queryDonation = Donation::where('status', 'available')->with('user');
 
+        // ✅ Show only your own donations (still not redeemed)
+        $queryDonation = Donation::where('user_id', Auth::id())
+            ->where('status', 'available') // Only show donated, not redeemed
+            ->with('user');
+
+        // ✅ Optional filters
         if ($request->filled('category')) {
             $queryInventory->where('category', $request->category);
             $queryDonation->where('category', $request->category);
@@ -24,13 +30,14 @@ class BrowseController extends Controller
             $queryDonation->whereDate('expiry_date', '<=', $request->expiry_date);
         }
 
-        // Filter by type (inventory or donation)
+        // ✅ Filter by type
         if ($request->type === 'inventory') {
             $items = $queryInventory->get();
         } elseif ($request->type === 'donation') {
             $items = $queryDonation->get();
         } else {
-            $items = $queryInventory->get()->merge($queryDonation->get());
+            // Show both (inventory + donated but not redeemed)
+            $items = $queryInventory->get()->merge($queryDonation->get())->values();
         }
 
         return view('managefoodinventory.browse', compact('items'));
