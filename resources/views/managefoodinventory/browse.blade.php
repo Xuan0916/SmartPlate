@@ -102,7 +102,7 @@
                                         </td>
                                         <td class="text-end">
                                            {{-- Mark as Used --}}
-                                            @if ($item->status !== 'used' && $item->status !== 'redeemed')
+                                            @if ($item->status !== 'used')
                                                 <form action="{{ route('inventory.markUsed', $item->id) }}" method="POST" style="display:inline-block;">
                                                     @csrf
                                                     @method('PUT')
@@ -114,7 +114,7 @@
                                             @endif
 
                                             {{-- Plan for Meal --}}
-                                            @if ($item->status !== 'reserved' && $item->status !== 'used' && $item->status !== 'redeemed')
+                                            @if ($item->status !== 'reserved' && $item->status !== 'used')
                                                 <form action="{{ route('inventory.planMeal', $item->id) }}" method="POST" style="display:inline-block;">
                                                     @csrf
                                                     @method('PUT')
@@ -124,9 +124,9 @@
                                                     </button>
                                                 </form>
                                             @endif
-                                            
+
                                             {{-- Convert to Donation --}}
-                                            @if ($item->status !== 'used' && $item->status !== 'redeemed')
+                                            @if ($item->status !== 'used' && $item->status !== 'reserved')
                                                 <a href="{{ route('inventory.convert.form', $item->id) }}" class="text-success ms-2">
                                                     <button type="submit" class="btn btn-outline-success btn-sm"
                                                         onclick="return confirm('Do you want to convert this item into a donation?')">

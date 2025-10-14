@@ -97,12 +97,14 @@
                                                 </form>
 
                                                 {{-- Convert --}}
-                                                <a href="{{ route('inventory.convert.form', $item->id) }}" class="text-success ms-2">
-                                                    <button type="submit" class="btn btn-outline-success btn-sm"
-                                                        onclick="return confirm('Do you want to convert this item into a donation?')">
-                                                        Donate
-                                                    </button>
-                                                </a>
+                                                @if ($item->status !== 'used' && $item->status !== 'reserved')
+                                                    <a href="{{ route('inventory.convert.form', $item->id) }}" class="text-success ms-2">
+                                                        <button type="submit" class="btn btn-outline-success btn-sm"
+                                                            onclick="return confirm('Do you want to convert this item into a donation?')">
+                                                            Donate
+                                                        </button>
+                                                    </a>
+                                                @endif
                                             </td>
                                         </tr>
                                     @empty
