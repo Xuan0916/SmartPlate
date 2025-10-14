@@ -171,4 +171,22 @@ class InventoryController extends Controller
         return redirect()->route('inventory.index')
             ->with('success', 'Item converted to donation successfully!');
     }
+
+    public function markUsed($id)
+    {
+        $item = InventoryItem::findOrFail($id);
+        $item->status = 'used';
+        $item->save();
+
+        return back()->with('success', 'Item marked as used successfully.');
+    }
+
+    public function planMeal($id)
+    {
+        $item = InventoryItem::findOrFail($id);
+        $item->status = 'reserved';
+        $item->save();
+
+        return back()->with('success', 'Item reserved for meal successfully.');
+    }
 }
