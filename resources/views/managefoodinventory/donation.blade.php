@@ -14,7 +14,7 @@
                 <nav class="flex flex-col space-y-2">
                     <a href="{{ route('inventory.index') }}" class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Inventory</a>
                     <a href="{{ route('donation.index') }}" class="px-3 py-2 rounded-md bg-blue-100 font-semibold text-blue-700">Donation</a>
-                    <a href="#" class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Browse Food Items</a>
+                    <a href="{{route('browse.index')}}" class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Browse Food Items</a>
                 </nav>
             </aside>
 
