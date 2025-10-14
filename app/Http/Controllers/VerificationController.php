@@ -79,7 +79,14 @@ class VerificationController extends Controller
         $user = User::where('email', $request->email)->firstOrFail();
         $user->password = Hash::make($request->password);
         $user->save();
+        // ✅ Log out the user if they're still authenticated
+        Auth::logout();
 
+        // ✅ Invalidate the session and regenerate the token for safety
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        // ✅ Redirect to login page (user not authenticated)
         return redirect()->route('login')->with('status', 'Password set successfully! You can now log in.');
     }
 
