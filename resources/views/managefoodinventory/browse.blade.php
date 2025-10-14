@@ -70,7 +70,6 @@
                                     <th>Category</th>
                                     <th>Quantity</th>
                                     <th>Expiry Date</th>
-                                    <th>From</th>
                                     <th>Status</th>
                                     <th class="text-end">Action</th>
                                 </tr>
@@ -83,13 +82,6 @@
                                         <td>{{ $item->quantity ?? '-' }}</td>
                                         <td>{{ $item->expiry_date ? \Carbon\Carbon::parse($item->expiry_date)->format('d/m/Y') : '-' }}</td>
                                         <td>
-                                            @if (isset($item->user))
-                                                {{ $item->user->name }}
-                                            @else
-                                                You
-                                            @endif
-                                        </td>
-                                        <td>
                                             @if ($item->status === 'available')
                                                 <span class="badge bg-success">Available</span>
                                             @elseif ($item->status === 'used')
@@ -101,44 +93,47 @@
                                             @endif
                                         </td>
                                         <td class="text-end">
-                                           {{-- Mark as Used --}}
-                                            @if ($item->status !== 'used')
-                                                <form action="{{ route('inventory.markUsed', $item->id) }}" method="POST" style="display:inline-block;">
-                                                    @csrf
-                                                    @method('PUT')
-                                                    <button type="submit" class="btn btn-outline-secondary btn-sm"
-                                                        onclick="return confirm('Are you sure you want to mark this item as used?')">
-                                                        Mark as Used
-                                                    </button>
-                                                </form>
-                                            @endif
+                                            @if ($item instanceof \App\Models\InventoryItem)
+                                                {{-- Inventory actions only --}}
+                                                @if ($item->status !== 'used')
+                                                    <form action="{{ route('inventory.markUsed', $item->id) }}" method="POST" style="display:inline-block;">
+                                                        @csrf
+                                                        @method('PUT')
+                                                        <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                                            onclick="return confirm('Are you sure you want to mark this item as used?')">
+                                                            Mark as Used
+                                                        </button>
+                                                    </form>
+                                                @endif
 
-                                            {{-- Plan for Meal --}}
-                                            @if ($item->status !== 'reserved' && $item->status !== 'used')
-                                                <form action="{{ route('inventory.planMeal', $item->id) }}" method="POST" style="display:inline-block;">
-                                                    @csrf
-                                                    @method('PUT')
-                                                    <button type="submit" class="btn btn-outline-warning btn-sm"
-                                                        onclick="return confirm('Do you want to reserve this item for a meal?')">
-                                                        Plan for Meal
-                                                    </button>
-                                                </form>
-                                            @endif
+                                                @if ($item->status !== 'reserved' && $item->status !== 'used')
+                                                    <form action="{{ route('inventory.planMeal', $item->id) }}" method="POST" style="display:inline-block;">
+                                                        @csrf
+                                                        @method('PUT')
+                                                        <button type="submit" class="btn btn-outline-warning btn-sm"
+                                                            onclick="return confirm('Do you want to reserve this item for a meal?')">
+                                                            Plan for Meal
+                                                        </button>
+                                                    </form>
+                                                @endif
 
-                                            {{-- Convert to Donation --}}
-                                            @if ($item->status !== 'used' && $item->status !== 'reserved')
-                                                <a href="{{ route('inventory.convert.form', $item->id) }}" class="text-success ms-2">
-                                                    <button type="submit" class="btn btn-outline-success btn-sm"
-                                                        onclick="return confirm('Do you want to convert this item into a donation?')">
-                                                        Donate
-                                                    </button>
-                                                </a>
+                                                @if ($item->status !== 'used' && $item->status !== 'reserved')
+                                                    <a href="{{ route('inventory.convert.form', $item->id) }}" class="text-success ms-2">
+                                                        <button type="submit" class="btn btn-outline-success btn-sm"
+                                                            onclick="return confirm('Do you want to convert this item into a donation?')">
+                                                            Donate
+                                                        </button>
+                                                    </a>
+                                                @endif
+                                            @else
+                                                {{-- Donation items — disable actions --}}
+                                                <button class="btn btn-outline-secondary btn-sm" disabled>Already Donated</button>
                                             @endif
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted py-3">No items found. Please adjust your filters.</td>
+                                        <td colspan="6" class="text-center text-muted py-3">No items found. Please adjust your filters.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
