@@ -20,4 +20,9 @@ class Donation extends Model
         'pickup_duration',
         'status',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

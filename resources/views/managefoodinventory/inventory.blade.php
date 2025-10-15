@@ -17,7 +17,7 @@
                            Inventory
                         </a>
                         <a href="{{ route('donation.index') }}"  class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Donation</a>
-                        <a href="#" class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Browse Food Items</a>
+                        <a href="{{route('browse.index')}}" class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Browse Food Items</a>
                     </nav>
                 </aside>
 
@@ -94,15 +94,21 @@
                                                 <form action="{{ route('inventory.destroy', $item->id) }}" method="POST" class="inline">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="btn btn-link text-danger p-0 m-0"
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm"
                                                         onclick="return confirm('Delete this item?')">
                                                         Delete
                                                     </button>
                                                 </form>
 
                                                 {{-- Convert --}}
-                                                <a href="{{ route('inventory.convert.form', $item->id) }}"
-                                                    class="text-success ms-2">Convert</a>
+                                                @if ($item->status !== 'used' && $item->status !== 'reserved')
+                                                    <a href="{{ route('inventory.convert.form', $item->id) }}" class="text-success ms-2">
+                                                        <button type="submit" class="btn btn-outline-success btn-sm"
+                                                            onclick="return confirm('Do you want to convert this item into a donation?')">
+                                                            Donate
+                                                        </button>
+                                                    </a>
+                                                @endif
                                             </td>
                                         </tr>
                                     @empty

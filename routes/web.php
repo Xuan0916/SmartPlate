@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\BrowseController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -47,6 +48,8 @@ Route::middleware(['auth'])->group(function () {
     // Convert to Donation
     Route::get('/inventory/{id}/convert', [InventoryController::class, 'convertForm'])->name('inventory.convert.form');
     Route::post('/inventory/{id}/convert', [InventoryController::class, 'convertStore'])->name('inventory.convert.store');
+    Route::put('/inventory/{id}/mark-used', [InventoryController::class, 'markUsed'])->name('inventory.markUsed');
+    Route::put('/inventory/{id}/plan-meal', [InventoryController::class, 'planMeal'])->name('inventory.planMeal');
 
     // 保留旧的测试静态版
     Route::view('/inventory/test', 'managefoodinventory.inventory')->name('inventory.test');
@@ -59,8 +62,7 @@ Route::middleware(['auth'])->group(function () {
     ->name('donation.redeem')
     ->middleware('auth');
 
-
-
+     Route::get('/browse', [BrowseController::class, 'index'])->name('browse.index');
 
     // ✅ Notifications
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
