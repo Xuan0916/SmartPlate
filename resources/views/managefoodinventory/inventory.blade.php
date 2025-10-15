@@ -86,6 +86,10 @@
                                                 @endif
                                             </td>
                                             <td class="text-end">
+                                                {{-- Edit --}}
+                                                <a href="{{ route('inventory.edit', $item->id) }}" class="btn btn-outline-primary btn-sm me-1">
+                                                    Edit
+                                                </a>
                                                 {{-- Delete --}}
                                                 <form action="{{ route('inventory.destroy', $item->id) }}" method="POST" class="inline">
                                                     @csrf

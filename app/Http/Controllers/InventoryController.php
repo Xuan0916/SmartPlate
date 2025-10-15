@@ -97,30 +97,32 @@ class InventoryController extends Controller
     /**
      * Update an existing item.
      */
+    public function edit($id)
+    {
+        $item = InventoryItem::findOrFail($id);
+        return view('managefoodinventory.edit', compact('item'));
+    }
+
+
     public function update(Request $request, $id)
     {
         $item = InventoryItem::findOrFail($id);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'category' => 'nullable|string|max:100', // ✅ 新增 category 验证
+            'category' => 'nullable|string|max:100',
             'quantity' => 'required|numeric|min:1',
             'unit' => 'required|string|max:50',
             'expiry_date' => 'nullable|date',
+            'status' => 'nullable|string|in:available,used,reserved,expired',
         ]);
 
-        // ✅ 更新包含 category 的数据
-        $item->update([
-            'name' => $request->name,
-            'category' => $request->category,
-            'quantity' => $request->quantity,
-            'unit' => $request->unit,
-            'expiry_date' => $request->expiry_date,
-        ]);
+        $item->update($validated);
 
         return redirect()->route('inventory.index')
             ->with('success', 'Item updated successfully!');
     }
+
 
     /**
      * Remove an item from inventory.
