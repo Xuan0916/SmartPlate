@@ -79,7 +79,7 @@
                                     <tr>
                                         <td>{{ $item->name ?? $item->item_name }}</td>
                                         <td>{{ $item->category ?? '-' }}</td>
-                                        <td>{{ $item->quantity ?? '-' }}</td>
+                                        <td>{{ $item->quantity ?? '-' }} {{ $item->unit ?? '-'}}</td>
                                         <td>{{ $item->expiry_date ? \Carbon\Carbon::parse($item->expiry_date)->format('d/m/Y') : '-' }}</td>
                                         <td>
                                             @if ($item->status === 'available')
