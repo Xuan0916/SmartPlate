@@ -37,11 +37,13 @@ Route::middleware('auth')->group(function () {
 // ✅ Inventory + Donation + Notification Routes
 Route::middleware(['auth'])->group(function () {
 
-    // Inventory CRUD
+    // Inventory Routes
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
     Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
+    Route::get('/inventory/{id}/edit', [InventoryController::class, 'edit'])->name('inventory.edit');
     Route::put('/inventory/{id}', [InventoryController::class, 'update'])->name('inventory.update');
     Route::delete('/inventory/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
+
 
     // Convert to Donation
     Route::get('/inventory/{id}/convert', [InventoryController::class, 'convertForm'])->name('inventory.convert.form');
