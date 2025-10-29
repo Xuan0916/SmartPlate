@@ -8,6 +8,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\BrowseController;
+use App\Http\Controllers\MealPlanController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -68,6 +69,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
+
+    Route::get('/mealplans', [MealPlanController::class, 'index'])->name('mealplans.index');
+    Route::get('/mealplans/create', [MealPlanController::class, 'create'])->name('mealplans.create');
+    Route::post('/mealplans', [MealPlanController::class, 'store'])->name('mealplans.store');
+    Route::get('/mealplans/{mealPlan}/edit', [MealPlanController::class, 'edit'])->name('mealplans.edit');
+    Route::put('/mealplans/{mealPlan}', [MealPlanController::class, 'update'])->name('mealplans.update');
+    Route::delete('/mealplans/{mealPlan}', [MealPlanController::class, 'destroy'])->name('mealplans.destroy');
+    Route::get('/mealplans/{mealPlan}/show', [MealPlanController::class, 'show'])->name('mealplans.show');
 });
 
 // Test
