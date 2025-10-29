@@ -62,6 +62,7 @@
                             type="datetime-local"
                             name="pickup_duration"
                             class="form-control"
+                            min="{{ date('Y-m-d\TH:i') }}"
                             required
                         />
                         {{-- Example: User can select “2025-10-12T14:00” --}}

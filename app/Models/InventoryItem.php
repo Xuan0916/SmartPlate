@@ -14,7 +14,7 @@ class InventoryItem extends Model
     protected $table = 'inventory_items';
 
     // ✅ 允许批量写入的字段（防止 MassAssignmentException）
-    protected $fillable = ['name', 'category', 'quantity', 'unit', 'expiry_date','user_id','status',];
+    protected $fillable = ['name', 'category', 'quantity','reserved_quantity', 'unit', 'expiry_date','user_id','status',];
 
 
     // ✅ 自动类型转换
@@ -56,5 +56,10 @@ class InventoryItem extends Model
 
         // 否则新建一条
         return self::create($data);
+    }
+
+    public function donations()
+    {
+        return $this->hasMany(Donation::class);
     }
 }

@@ -30,7 +30,9 @@ class DonationController extends Controller
 
         // ✅ 创建 Donation 记录
         Donation::create([
+            'donor_id' => Auth::id(),
             'user_id' => Auth::id(),
+            'inventory_item_id' => $item->id, 
             'item_name' => $item->name,
             'category' => $item->category,
             'quantity' => $item->quantity,
@@ -66,17 +68,16 @@ class DonationController extends Controller
     {
         $donation = Donation::findOrFail($id);
 
-        // ✅ Step 1: 尝试恢复被软删除的库存（如果存在）
-        $existing = InventoryItem::withTrashed()
-            ->where('name', $donation->item_name)
-            ->first();
-
-        if ($existing) {
-            // 如果找到软删除的旧记录 → 直接恢复
-            $existing->restore();
+        // Try to restore original inventory if linked
+        if ($donation->inventory_item_id) {
+            $item = InventoryItem::withTrashed()->find($donation->inventory_item_id);
+            if ($item) {
+                $item->restore();
+            }
         } else {
-            // 否则 → 创建新的一条
+            // fallback if not linked
             InventoryItem::create([
+                'user_id' => $donation->donor_id, // assign back to donor
                 'name' => $donation->item_name,
                 'quantity' => $donation->quantity ?? 1,
                 'unit' => $donation->unit ?? 'pcs',
@@ -84,10 +85,8 @@ class DonationController extends Controller
             ]);
         }
 
-        // ✅ Step 2: 删除 donation
         $donation->delete();
 
-        // ✅ Step 3: 新建通知
         Notification::create([
             'item_name' => $donation->item_name,
             'message' => 'Donation of "' . $donation->item_name . '" has been removed and returned to inventory.',
@@ -95,7 +94,6 @@ class DonationController extends Controller
             'status' => 'new',
         ]);
 
-        // ✅ Step 4: 返回提示
         return redirect()->route('donation.index')
             ->with('success', 'Donation removed and item returned to inventory.');
     }
