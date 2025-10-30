@@ -239,25 +239,26 @@ class MealPlanController extends Controller
     public function destroy(MealPlan $mealPlan)
     {
         if (Auth::id() != $mealPlan->user_id) {
-            abort(403, 'Unauthorized action.');
+            abort(403);
         }
 
-        // 🧹 Release all reserved quantities before deletion
+        // Loop through all ingredients tied to this plan and restore reserved quantities
         foreach ($mealPlan->meals as $meal) {
             foreach ($meal->ingredients as $ingredient) {
                 $inventoryItem = $ingredient->inventoryItem;
+
                 if ($inventoryItem) {
+                    $inventoryItem->quantity += $ingredient->quantity_used;
                     $inventoryItem->reserved_quantity -= $ingredient->quantity_used;
-                    if ($inventoryItem->reserved_quantity < 0) {
-                        $inventoryItem->reserved_quantity = 0;
-                    }
                     $inventoryItem->save();
                 }
             }
         }
 
+        // Delete the meal plan (this should also delete meals and ingredients if cascaded)
         $mealPlan->delete();
 
-        return redirect()->route('mealplans.index')->with('success', 'Meal plan deleted successfully!');
+        return redirect()->route('mealplans.index')->with('success', 'Meal plan deleted and inventory restored.');
     }
+
 }
