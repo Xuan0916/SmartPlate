@@ -5,13 +5,13 @@
         </h2>
     </x-slot>
     <div class="py-12 max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <div class="flex justify-end mb-6">
-            <a href="{{ route('mealplans.create') }}"
-            class="btn btn-primary">
-                + Plan New Week
-            </a>
-        </div>
         @if ($mealPlans->isNotEmpty())
+            <div class="flex justify-end mb-6">
+                <a href="{{ route('mealplans.create') }}"
+                class="btn btn-primary">
+                    + Plan New Week
+                </a>
+            </div>
             <div class="grid md:grid-cols-3 gap-6">
                 @foreach ($mealPlans as $plan)
                     @php
@@ -37,9 +37,19 @@
                             <a href="{{ route('mealplans.show', $plan) }}" class="text-indigo-600 text-sm font-medium hover:underline">
                                 View Details
                             </a>
-                            <a href="{{ route('mealplans.edit', $plan) }}" class="text-gray-500 text-sm hover:text-indigo-700">
-                                ✏️ Edit
-                            </a>
+                            <div class="flex items-center space-x-3">
+                                <a href="{{ route('mealplans.edit', $plan) }}" class="text-gray-500 text-sm hover:text-indigo-700">
+                                    ✏️ Edit
+                                </a>
+
+                                <form action="{{ route('mealplans.destroy', $plan) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this meal plan?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-500 text-sm hover:text-red-700">
+                                        🗑️ Delete
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 @endforeach
