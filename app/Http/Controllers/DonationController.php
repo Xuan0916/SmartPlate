@@ -17,9 +17,14 @@ class DonationController extends Controller
         return view('managefoodinventory.donation', compact('donations'));
     }
 
-    // ✅ Convert from inventory
+    // ✅ Convert from inventory to donation
     public function convert(Request $request)
     {
+        // 登录安全检查
+        if (!Auth::check()) {
+            return redirect()->route('login')->with('error', 'Please log in first.');
+        }
+
         $request->validate([
             'item_id' => 'required|exists:inventory_items,id',
             'pickup_location' => 'required|string|max:255',
@@ -28,11 +33,11 @@ class DonationController extends Controller
 
         $item = InventoryItem::findOrFail($request->item_id);
 
-        // ✅ 创建 Donation 记录
-        Donation::create([
+        // ✅ 创建 Donation
+        $donation = Donation::create([
             'donor_id' => Auth::id(),
             'user_id' => Auth::id(),
-            'inventory_item_id' => $item->id, 
+            'inventory_item_id' => $item->id,
             'item_name' => $item->name,
             'category' => $item->category,
             'quantity' => $item->quantity,
@@ -43,23 +48,19 @@ class DonationController extends Controller
             'pickup_duration' => $request->pickup_duration,
         ]);
 
-        // ✅ 创建 Donation 成功的通知
-        try {
-            Notification::create([
-                'item_name' => $item->name,
-                'message' => 'You have successfully donated "' . $item->name . '".',
-                'expiry_date' => now(),
-                'status' => 'new',
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('❌ Failed to create donation notification for item ' . $item->name . ': ' . $e->getMessage());
-        }
+        // ✅ 给捐赠者发私人通知
+        Notification::create([
+            'user_id' => Auth::id(),
+            'item_name' => $item->name,
+            'message' => 'You have successfully donated "' . $item->name . '".',
+            'expiry_date' => now(),
+            'status' => 'new',
+        ]);
 
-        // ✅ 从库存软删除
+        // 从库存移除
         $item->delete();
 
-        return redirect()
-            ->route('donation.index')
+        return redirect()->route('donation.index')
             ->with('success', 'Item successfully converted to donation!');
     }
 
@@ -68,16 +69,12 @@ class DonationController extends Controller
     {
         $donation = Donation::findOrFail($id);
 
-        // Try to restore original inventory if linked
         if ($donation->inventory_item_id) {
             $item = InventoryItem::withTrashed()->find($donation->inventory_item_id);
-            if ($item) {
-                $item->restore();
-            }
+            if ($item) $item->restore();
         } else {
-            // fallback if not linked
             InventoryItem::create([
-                'user_id' => $donation->donor_id, // assign back to donor
+                'user_id' => $donation->donor_id,
                 'name' => $donation->item_name,
                 'quantity' => $donation->quantity ?? 1,
                 'unit' => $donation->unit ?? 'pcs',
@@ -88,8 +85,9 @@ class DonationController extends Controller
         $donation->delete();
 
         Notification::create([
+            'user_id' => $donation->donor_id,
             'item_name' => $donation->item_name,
-            'message' => 'Donation of "' . $donation->item_name . '" has been removed and returned to inventory.',
+            'message' => 'Your donation of "' . $donation->item_name . '" has been removed and returned to inventory.',
             'expiry_date' => now(),
             'status' => 'new',
         ]);
@@ -98,22 +96,24 @@ class DonationController extends Controller
             ->with('success', 'Donation removed and item returned to inventory.');
     }
 
+    // ✅ Redeem donation (claim)
     public function redeem($id)
     {
+        if (!Auth::check()) {
+            return redirect()->route('login')->with('error', 'Please log in first.');
+        }
+
         $donation = Donation::findOrFail($id);
 
-        // ✅ Check if already redeemed
         if ($donation->status === 'redeemed') {
             return redirect()->back()->with('error', 'This item has already been redeemed.');
         }
 
-        // ✅ Update donation status and assign to current user
         $donation->update([
             'status' => 'redeemed',
             'user_id' => Auth::id(),
         ]);
 
-        // ✅ Add the item to the user's inventory
         InventoryItem::create([
             'user_id' => Auth::id(),
             'name' => $donation->item_name,
@@ -121,11 +121,60 @@ class DonationController extends Controller
             'quantity' => $donation->quantity,
             'unit' => $donation->unit,
             'expiry_date' => $donation->expiry_date,
-            'created_at' => now(),
-            'updated_at' => now(),
+        ]);
+
+        // ✅ 通知双方
+        Notification::create([
+            'user_id' => $donation->donor_id,
+            'item_name' => $donation->item_name,
+            'message' => 'Your item "' . $donation->item_name . '" has been claimed by another user.',
+            'expiry_date' => now(),
+            'status' => 'new',
+        ]);
+
+        Notification::create([
+            'user_id' => Auth::id(),
+            'item_name' => $donation->item_name,
+            'message' => 'You have successfully claimed "' . $donation->item_name . '".',
+            'expiry_date' => now(),
+            'status' => 'new',
         ]);
 
         return redirect()->back()->with('success', 'Item successfully redeemed and added to your inventory!');
     }
 
+    // ✅ Pickup donation (领取人确认取走)
+    public function pickup($id)
+    {
+        if (!Auth::check()) {
+            return redirect()->route('login')->with('error', 'Please log in first.');
+        }
+
+        $donation = Donation::findOrFail($id);
+
+        if ($donation->status !== 'redeemed') {
+            return redirect()->back()->with('error', 'This item must be redeemed before pickup.');
+        }
+
+        $donation->update(['status' => 'picked_up']);
+
+        // ✅ 通知双方
+        Notification::create([
+            'user_id' => $donation->donor_id,
+            'item_name' => $donation->item_name,
+            'message' => 'Your item "' . $donation->item_name . '" has been picked up.',
+            'expiry_date' => now(),
+            'status' => 'new',
+        ]);
+
+        Notification::create([
+            'user_id' => $donation->user_id,
+            'item_name' => $donation->item_name,
+            'message' => 'You have successfully picked up "' . $donation->item_name . '".',
+            'expiry_date' => now(),
+            'status' => 'new',
+        ]);
+
+        return redirect()->back()->with('success', 'Pickup confirmed successfully!');
+    }
 }
