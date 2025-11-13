@@ -95,7 +95,7 @@
                                         <td class="text-end">
                                             @if ($item instanceof \App\Models\InventoryItem)
                                                 {{-- Inventory actions only --}}
-                                                @if ($item->status !== 'used')
+                                                @if ($item->status !== 'used' && $item->status !== 'expired')
                                                     <form action="{{ route('inventory.markUsed', $item->id) }}" method="POST" style="display:inline-block;">
                                                         @csrf
                                                         @method('PUT')
@@ -106,7 +106,7 @@
                                                     </form>
                                                 @endif
 
-                                                @if ($item->status !== 'reserved' && $item->status !== 'used')
+                                                @if ($item->status !== 'reserved' && $item->status !== 'used' && $item->status !== 'expired')
                                                     <form action="{{ route('inventory.planMeal', $item->id) }}" method="POST" style="display:inline-block;">
                                                         @csrf
                                                         @method('PUT')
@@ -117,7 +117,7 @@
                                                     </form>
                                                 @endif
 
-                                                @if ($item->status !== 'used' && $item->status !== 'reserved')
+                                                @if ($item->status !== 'used' && $item->status !== 'reserved' && $item->status !== 'expired')
                                                     <a href="{{ route('inventory.convert.form', $item->id) }}" class="text-success ms-2">
                                                         <button type="submit" class="btn btn-outline-success btn-sm"
                                                             onclick="return confirm('Do you want to convert this item into a donation?')">
