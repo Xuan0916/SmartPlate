@@ -48,6 +48,61 @@
                             </button>
                         </div>
 
+                        {{-- Add Item Form (unchanged) --}}
+                        <div id="add-new-item" class="mt-4" style="display: none;">
+                            <div class="card mb-1">
+                                <div class="card-body">
+                                    <h6 class="card-title mb-3">{{ __('Add Item') }}</h6>
+                                    <form method="POST" action="{{ route('inventory.store') }}">
+                                        @csrf
+                                        <div class="row g-2">
+                                            <div class="col-md-4">
+                                                <label class="form-label">Item name</label>
+                                                <input type="text" name="name" class="form-control" required>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">Category</label>
+                                                <select name="category" class="form-select" required>
+                                                    <option value="">Select category</option>
+                                                    <option value="Dairy">Dairy</option>
+                                                    <option value="Meat">Meat</option>
+                                                    <option value="Vegetable">Vegetable</option>
+                                                    <option value="Fruit">Fruit</option>
+                                                    <option value="Grain">Grain</option>
+                                                    <option value="Drink">Drink</option>
+                                                    <option value="Snack">Snack</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label">Quantity</label>
+                                                <input type="number" name="quantity" class="form-control" required>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label">Unit</label>
+                                                <select name="unit" class="form-select" required>
+                                                    <option>pcs</option>
+                                                    <option>packs</option>
+                                                    <option>litres</option>
+                                                    <option>g</option>
+                                                    <option>ml</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">Expiry date</label>
+                                                <input type="date" name="expiry_date" class="form-control" min="{{ date('Y-m-d') }}">
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-3 flex gap-2">
+                                            <button class="btn btn-primary btn-sm" type="submit">Save</button>
+                                            <button class="btn btn-outline-secondary btn-sm" type="reset">Reset</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
                         {{-- ✅ Inventory Table --}}
                         <div class="table-responsive mb-4">
                             <table class="table align-middle mb-0">
@@ -121,7 +176,7 @@
                                                     </button>
                                                 </form>
 
-                                                @if ($item->status !== 'used' && $reserved < $item->quantity)
+                                                @if ($item->status !== 'used' && $reserved < $item->quantity && $item->status !== 'expired')
                                                     <a href="{{ route('inventory.convert.form', $item->id) }}">
                                                         <button type="button" class="btn btn-outline-success btn-sm ms-1"
                                                             onclick="return confirm('Convert this item into a donation?')">
@@ -139,62 +194,7 @@
                                 </tbody>
 
                             </table>
-                        </div>
-
-                        {{-- Add Item Form (unchanged) --}}
-                        <div id="add-new-item" class="mt-4" style="display: none;">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="card-title mb-3">{{ __('Add Item') }}</h6>
-                                    <form method="POST" action="{{ route('inventory.store') }}">
-                                        @csrf
-                                        <div class="row g-2">
-                                            <div class="col-md-4">
-                                                <label class="form-label">Item name</label>
-                                                <input type="text" name="name" class="form-control" required>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label class="form-label">Category</label>
-                                                <select name="category" class="form-select" required>
-                                                    <option value="">Select category</option>
-                                                    <option value="Dairy">Dairy</option>
-                                                    <option value="Meat">Meat</option>
-                                                    <option value="Vegetable">Vegetable</option>
-                                                    <option value="Fruit">Fruit</option>
-                                                    <option value="Grain">Grain</option>
-                                                    <option value="Drink">Drink</option>
-                                                    <option value="Snack">Snack</option>
-                                                    <option value="Other">Other</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <label class="form-label">Quantity</label>
-                                                <input type="number" name="quantity" class="form-control" required>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <label class="form-label">Unit</label>
-                                                <select name="unit" class="form-select" required>
-                                                    <option>pcs</option>
-                                                    <option>packs</option>
-                                                    <option>litres</option>
-                                                    <option>g</option>
-                                                    <option>ml</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label class="form-label">Expiry date</label>
-                                                <input type="date" name="expiry_date" class="form-control" min="{{ date('Y-m-d') }}">
-                                            </div>
-                                        </div>
-
-                                        <div class="mt-3 flex gap-2">
-                                            <button class="btn btn-primary btn-sm" type="submit">Save</button>
-                                            <button class="btn btn-outline-secondary btn-sm" type="reset">Reset</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
+                        </div>      
 
                     </div>
                 </div>

@@ -9,33 +9,26 @@
         <div class="card shadow-sm">
             <div class="card-body p-4">
 
-                {{-- Form action points to the update method, using @method('PUT') --}}
                 <form method="POST" action="{{ route('mealplans.update', $mealPlan) }}">
                     @csrf
                     @method('PUT')
 
-                    {{-- Hidden input holds the original calculated week_start --}}
                     <input type="hidden" id="week_start" name="week_start" value="{{ $mealPlan->week_start }}" required>
 
-                    {{-- Week Display --}}
-                    @php
-                        $startDate = \Carbon\Carbon::parse($mealPlan->week_start);
-                        $endDate = $startDate->clone()->addDays(6);
-                    @endphp
                     <div class="flex justify-between items-center mb-4">
                         <h5 class="fw-semibold mb-0">Editing Week: 
                             <span id="weekRange" class="badge bg-warning text-dark">
-                                {{ $startDate->format('Y-m-d') }} &mdash; {{ $endDate->format('Y-m-d') }}
+                                {{ \Carbon\Carbon::parse($mealPlan->week_start)->format('Y-m-d') }} &mdash; 
+                                {{ \Carbon\Carbon::parse($mealPlan->week_start)->addDays(6)->format('Y-m-d') }}
                             </span>
                         </h5>
                         <a href="{{ route('mealplans.index') }}" class="btn btn-sm btn-secondary">
                             &larr; Back to Index
                         </a>
                     </div>
-                    
+
                     <hr class="mb-4">
-                    
-                    {{-- Weekly plan table (populated by JS) --}}
+
                     <div id="weeklyPlan" class="mt-4">
                         <h5 class="fw-semibold mb-3">Update Meals (7 Days)</h5>
                         <div class="table-responsive">
@@ -49,9 +42,7 @@
                                         <th>Snack</th>
                                     </tr>
                                 </thead>
-                                <tbody id="mealRows">
-                                    {{-- Rows will be populated here by JavaScript --}}
-                                </tbody>
+                                <tbody id="mealRows"></tbody>
                             </table>
                         </div>
 
@@ -63,16 +54,21 @@
         </div>
     </div>
 
-    {{-- ✅ JavaScript to pre-populate the 7-day plan --}}
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const inventoryItems = @json($inventoryItems);
-        const mealPlanData = @json($mealPlan->meals);
-        const startDateString = document.getElementById('week_start').value;
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <script>
+    document.addEventListener('DOMContentLoaded', async function () {
+        const inventoryItems = @json($inventoryItems); // all available inventory
+        const mealPlanData = @json($mealPlan->meals);  // existing saved meals
+        const recipeList = @json($recipes);            // all recipes
+
+        const weekStartInput = document.getElementById('week_start');
+        const weekRangeSpan = document.getElementById('weekRange');
         const tbody = document.getElementById('mealRows');
-        const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
-        
+        const weeklyPlan = document.getElementById('weeklyPlan');
+        const mealTypes = ['breakfast','lunch','dinner','snack'];
+
         // Build lookup for existing meals
         const mealsLookup = mealPlanData.reduce((acc, meal) => {
             const key = `${meal.date}_${meal.meal_type}`;
@@ -84,88 +80,95 @@
             return date.toISOString().split('T')[0];
         }
 
-        // --- Generate dropdown options (includes data-max-qty) ---
-        function generateOptions(selectedId = null) {
-            let options = '<option value="">Select Ingredient</option>';
-            inventoryItems.forEach(item => {
-                const selected = (item.id == selectedId) ? 'selected' : '';
-                options += `<option value="${item.id}" ${selected} data-max-qty="${item.quantity}">${item.name}</option>`;
-            });
-            return options;
-        }
+        // Generate ingredient row HTML
+        function createIngredientRow(mealIndex, idx, itemId = '', qtyUsed = '') {
+            const selectedItem = inventoryItems.find(i => i.id == itemId);
+            const maxQty = selectedItem ? selectedItem.quantity : 0;
+            const placeholder = itemId 
+                ? (maxQty > 0 ? `Max: ${maxQty}` : 'Out of stock') 
+                : 'Select an ingredient';
 
-        // --- Create ingredient row ---
-        function createIngredientRowHtml(mealIndex, newIndex, itemId = null, qtyUsed = '') {
-            const optionsHtml = generateOptions(itemId);
-            let maxQty = 0;
-            let placeholder = "Qty";
-
-            if (itemId) {
-                const item = inventoryItems.find(i => i.id == itemId);
-                if (item) {
-                    maxQty = item.quantity;
-                    placeholder = maxQty > 0 ? `Max: ${maxQty}` : "Out of stock";
-                }
-            }
+            const optionsHtml = inventoryItems
+                .filter(i => i.status !== 'expired')
+                .map(i => `<option value="${i.id}" ${i.id==itemId?'selected':''} data-available="${i.quantity}">${i.name}</option>`)
+                .join('');
 
             return `
-                <div class="mb-2 ingredient-row-${newIndex} flex items-center mt-1">
-                    <select name="meals[${mealIndex}][ingredients][${newIndex}][inventory_item_id]" 
-                        class="form-select form-select-sm me-1 text-xs ingredient-select" style="padding-right:0.25rem; width: 60%;">
+                <div class="mb-2 d-flex align-items-center mt-1">
+                    <select name="meals[${mealIndex}][ingredients][${idx}][inventory_item_id]" 
+                        class="form-select form-select-sm me-1 text-xs ingredient-select" style="width:60%">
+                        <option value="">Select Ingredient</option>
                         ${optionsHtml}
                     </select>
-                    <input type="number" name="meals[${mealIndex}][ingredients][${newIndex}][quantity_used]" 
-                        class="form-control form-control-sm me-1 text-xs text-center qty-input" 
-                        placeholder="${placeholder}" value="${qtyUsed}" 
-                        min="1" max="${maxQty}" style="width: 40%;" ${maxQty === 0 ? 'disabled' : ''}>
+                    <input type="number" name="meals[${mealIndex}][ingredients][${idx}][quantity_used]" 
+                        class="form-control form-control-sm text-xs text-center qty-input" 
+                        style="width:40%" value="${qtyUsed}" min="1" max="${maxQty}" 
+                        placeholder="${placeholder}" ${maxQty===0 && itemId ? 'disabled' : ''}>
                     <button type="button" class="btn btn-sm btn-danger remove-ingredient ms-1">X</button>
                 </div>
             `;
         }
 
-        // --- Generate 7-day table for editing ---
-        function generateEditPlan(startDateString) {
+        // Generate the weekly plan table
+        function generatePlan(startDateString) {
             tbody.innerHTML = '';
             const startDate = new Date(startDateString);
-            
-            for (let i = 0; i < 7; i++) {
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            weekRangeSpan.textContent = `${formatDate(startDate)} — ${formatDate(endDate)}`;
+
+            for(let i=0;i<7;i++){
                 const current = new Date(startDate);
                 current.setDate(startDate.getDate() + i);
-                const dayName = current.toLocaleDateString('en-US', { weekday: 'short' });
+                const dayName = current.toLocaleDateString('en-US', { weekday:'short' });
                 const dateFormatted = formatDate(current);
 
-                let row = `<tr>
-                    <td class="p-2"><strong>${dayName}</strong><br><small>${dateFormatted}</small></td>`;
+                let row = `<tr><td><strong>${dayName}</strong><br><small>${dateFormatted}</small></td>`;
 
                 mealTypes.forEach(type => {
                     const mealIndex = `${i}_${type}`;
                     const mealKey = `${dateFormatted}_${type}`;
                     const existingMeal = mealsLookup[mealKey];
-                    
-                    const recipeName = existingMeal ? existingMeal.recipe_name : '';
-                    const existingIngredients = existingMeal && existingMeal.ingredients.length > 0 
-                        ? existingMeal.ingredients : [{}];
-                    
-                    row += `
-                        <td class="p-1">
-                            <input type="hidden" name="meals[${mealIndex}][date]" value="${dateFormatted}">
-                            <input type="hidden" name="meals[${mealIndex}][meal_type]" value="${type}">
-                            
-                            <input type="text" name="meals[${mealIndex}][recipe_name]" 
-                                class="form-control form-control-sm mb-2 text-xs" 
-                                placeholder="Meal name" value="${recipeName}">
-                                
-                            <div class="ingredient-list" data-meal-index="${mealIndex}">`;
 
-                    existingIngredients.forEach((ingredient, ingIndex) => {
-                        const itemId = ingredient.inventory_item_id ?? '';
-                        const qtyUsed = ingredient.quantity_used ?? '';
-                        row += createIngredientRowHtml(mealIndex, ingIndex, itemId, qtyUsed);
+                    // Determine recipe/custom
+                    let recipeName = '';
+                    let customName = '';
+                    if (existingMeal && existingMeal.recipe_name) {
+                        const foundRecipe = recipeList.find(r => r.name === existingMeal.recipe_name);
+                        if (foundRecipe) {
+                            recipeName = existingMeal.recipe_name;
+                        } else {
+                            customName = existingMeal.recipe_name; // treat as custom
+                        }
+                    }
+
+                    const ingredients = existingMeal && existingMeal.ingredients.length>0 ? existingMeal.ingredients : [];
+
+                    // Build recipe options
+                    let recipeOptions = `<option value="">-- Select Recipe --</option>`;
+                    recipeList.forEach(r=>{
+                        recipeOptions += `<option value="${r.name}" data-ingredients='${JSON.stringify(r.ingredients)}' ${r.name===recipeName?'selected':''}>${r.name}</option>`;
                     });
 
-                    row += `
-                        <button type="button" class="btn btn-sm btn-outline-primary add-ingredient mt-1" 
-                            data-meal-index="${mealIndex}">+ Add Another</button>
+                    row += `<td class="p-1">
+                        <input type="hidden" name="meals[${mealIndex}][date]" value="${dateFormatted}">
+                        <input type="hidden" name="meals[${mealIndex}][meal_type]" value="${type}">
+
+                        <select name="meals[${mealIndex}][recipe_name]" class="form-select form-select-sm mb-2 text-xs recipe-select" data-meal-index="${mealIndex}">
+                            ${recipeOptions}
+                        </select>
+
+                        <input type="text" name="meals[${mealIndex}][custom_recipe_name]" 
+                            class="form-control form-control-sm mb-2 text-xs custom-recipe-input" 
+                            placeholder="Custom Meal Plan (optional)" value="${customName}">
+
+                        <div class="ingredient-list" data-meal-index="${mealIndex}">`;
+
+                    ingredients.forEach((ing, idx)=>{
+                        row += createIngredientRow(mealIndex, idx, ing.inventory_item_id ?? '', ing.quantity_used ?? '');
+                    });
+
+                    row += `<button type="button" class="btn btn-sm btn-outline-primary add-ingredient mt-1" data-meal-index="${mealIndex}">+ Add Ingredient</button>
                         </div>
                     </td>`;
                 });
@@ -175,63 +178,159 @@
             }
         }
 
-        // --- Dynamic add/remove ---
-        document.getElementById('weeklyPlan').addEventListener('click', function(e) {
-            if (e.target.classList.contains('add-ingredient')) {
+        // --- Add/remove ingredient dynamically ---
+        weeklyPlan.addEventListener('click', function(e){
+            if(e.target.classList.contains('add-ingredient')){
                 const button = e.target;
-                const ingredientListDiv = button.closest('.ingredient-list');
                 const mealIndex = button.dataset.mealIndex;
-                const newIndex = ingredientListDiv.querySelectorAll('.mb-2').length;
-                const newIngredientHtml = createIngredientRowHtml(mealIndex, newIndex);
-                button.insertAdjacentHTML('beforebegin', newIngredientHtml);
+                const ingredientList = button.closest('.ingredient-list');
+                const idx = ingredientList.querySelectorAll('.mb-2').length;
+                button.insertAdjacentHTML('beforebegin', createIngredientRow(mealIndex, idx));
             }
-            
-            if (e.target.classList.contains('remove-ingredient')) {
-                e.target.closest('.mb-2').remove(); 
+            if(e.target.classList.contains('remove-ingredient')){
+                e.target.closest('.mb-2').remove();
             }
         });
 
-        // --- Show max and validate quantities ---
-        document.getElementById('weeklyPlan').addEventListener('change', function(e) {
-            // When ingredient selected
+        // --- Dynamic ingredient quantity placeholder update ---
+        weeklyPlan.addEventListener('change', function(e){
             if (e.target.classList.contains('ingredient-select')) {
                 const select = e.target;
-                const maxQty = parseInt(select.selectedOptions[0]?.dataset.maxQty) || 0;
-                const rowContainer = select.closest('.flex');
-                const qtyInput = rowContainer.querySelector('.qty-input');
+                const selectedOption = select.selectedOptions[0];
+                const qtyInput = select.closest('.d-flex').querySelector('.qty-input');
+                const availableQty = parseFloat(selectedOption.dataset.available || 0);
 
-                if (qtyInput) {
-                    qtyInput.max = maxQty;
-                    qtyInput.min = 1;
-                    qtyInput.placeholder = maxQty > 0 ? `Max: ${maxQty}` : 'Out of stock';
-                    qtyInput.disabled = maxQty === 0;
+                qtyInput.max = availableQty;
+                qtyInput.placeholder = availableQty 
+                    ? `Max: ${availableQty}` 
+                    : 'Out of stock';
+                qtyInput.disabled = !availableQty;
+            }
+        });
 
-                    if (qtyInput.value > maxQty) {
-                        qtyInput.value = maxQty;
-                        alert(`⚠️ You can only use up to ${maxQty} of this ingredient.`);
+        // --- Handle recipe/custom meal conflicts & ingredient autofill ---
+        weeklyPlan.addEventListener('change', async function(e){
+            const td = e.target.closest('td');
+            if(!td) return;
+            const mealIndex = td.querySelector('.recipe-select').dataset.mealIndex;
+
+            // Recipe selected
+            if(e.target.classList.contains('recipe-select')){
+                const select = e.target;
+                const customInput = td.querySelector('.custom-recipe-input');
+
+                // Warn if custom exists
+                if(customInput && customInput.value.trim()!==''){
+                    const result = await Swal.fire({
+                        title: "Replace Custom Meal?",
+                        text: "Selecting a recipe will remove custom meal. Continue?",
+                        icon: "warning",
+                        showCancelButton:true,
+                        confirmButtonText:"Yes, replace",
+                        cancelButtonText:"Cancel"
+                    });
+                    if(result.isConfirmed){
+                        customInput.value='';
+                    } else{
+                        select.value='';
+                        return;
+                    }
+                }
+
+                // Clear previous ingredients
+                const ingredientList = td.querySelector('.ingredient-list');
+                ingredientList.querySelectorAll('.mb-2').forEach(el=>el.remove());
+
+                // Autofill recipe ingredients
+                const selectedOption = select.selectedOptions[0];
+                const ingredientsData = selectedOption.dataset.ingredients ? JSON.parse(selectedOption.dataset.ingredients) : [];
+
+                // Check availability
+                const insufficient = ingredientsData.some(ing=>{
+                    const match = inventoryItems.find(i=>i.id==ing.inventory_item_id);
+                    const qty = ing.quantity_used??1;
+                    return !match || match.status==='expired' || qty>match.quantity;
+                });
+
+                if(insufficient){
+                    Swal.fire({
+                        icon:'warning',
+                        title:'Insufficient Ingredients',
+                        text:'This recipe cannot be added due to missing/insufficient ingredients.'
+                    });
+                    select.value='';
+                    return;
+                }
+
+                // Add ingredients
+                ingredientsData.forEach((ing, idx)=>{
+                    ingredientList.insertAdjacentHTML('beforeend', createIngredientRow(mealIndex, idx, ing.inventory_item_id, ing.quantity_used));
+                });
+            }
+
+            // Custom meal input
+            if(e.target.classList.contains('custom-recipe-input')){
+                const input = e.target;
+                const recipeSelect = td.querySelector('.recipe-select');
+
+                if(recipeSelect && recipeSelect.value && input.value.trim()!==''){
+                    const result = await Swal.fire({
+                        title:"Replace Recipe?",
+                        text:"Typing a custom meal will remove selected recipe. Continue?",
+                        icon:"warning",
+                        showCancelButton:true,
+                        confirmButtonText:"Yes, replace recipe",
+                        cancelButtonText:"Cancel"
+                    });
+                    if(result.isConfirmed){
+                        recipeSelect.value='';
+                        td.querySelectorAll('.ingredient-list .mb-2').forEach(el=>el.remove());
+                    } else{
+                        input.value='';
                     }
                 }
             }
 
-            // When quantity changes
-            if (e.target.classList.contains('qty-input')) {
+            // Quantity enforcement
+            if(e.target.matches('input[type="number"]')){
                 const input = e.target;
                 const max = parseFloat(input.max);
-                const val = parseFloat(input.value);
-                if (max && val > max) {
-                    alert(`⚠️ Maximum available is ${max}. Adjusted automatically.`);
-                    input.value = max;
-                } else if (val < 1) {
-                    input.value = 1;
+                if(max && input.value>max){
+                    Swal.fire({icon:'warning', title:'Quantity Limit Exceeded', text:`Max ${max}`});
+                    input.value=max;
+                } else if(input.value<1){
+                    input.value=1;
                 }
             }
         });
 
+        // --- Before form submit: move custom recipe name into recipe_name ---
+        document.querySelector('form').addEventListener('submit', function () {
+            document.querySelectorAll('.custom-recipe-input').forEach(input => {
+                const td = input.closest('td');
+                const recipeSelect = td.querySelector('.recipe-select');
+                const customValue = input.value.trim();
+
+                // If no recipe selected but custom meal typed in
+                if (!recipeSelect.value && customValue !== '') {
+                    // Explicitly set the select's value and create an option that will be submitted
+                    let opt = recipeSelect.querySelector(`option[value="${customValue}"]`);
+                    if (!opt) {
+                        opt = document.createElement('option');
+                        opt.value = customValue;
+                        opt.textContent = customValue;
+                        recipeSelect.appendChild(opt);
+                    }
+                    opt.selected = true;
+                    recipeSelect.value = customValue; // <-- this line ensures it’s recognized
+                }
+            });
+        });
+
         // --- Initial render ---
-        if (startDateString) {
-            generateEditPlan(startDateString);
+        if(weekStartInput.value){
+            generatePlan(weekStartInput.value);
         }
     });
     </script>
-
 </x-app-layout>

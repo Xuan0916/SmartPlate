@@ -22,6 +22,12 @@ class InventoryController extends Controller
         $today = Carbon::today();
         $threeDaysLater = $today->copy()->addDays(3);
 
+        // ✅ Update already expired items
+        InventoryItem::where('user_id', $userId)
+            ->whereNotNull('expiry_date')
+            ->where('expiry_date', '<', $today)
+            ->update(['status' => 'expired']);
+
         // ✅ 检查 3 天内即将过期的物品
         $expiringItems = InventoryItem::where('user_id', $userId)
             ->whereNotNull('expiry_date')
