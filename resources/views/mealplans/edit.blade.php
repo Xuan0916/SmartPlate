@@ -89,9 +89,15 @@
                 : 'Select an ingredient';
 
             const optionsHtml = inventoryItems
-                .filter(i => i.status !== 'expired')
-                .map(i => `<option value="${i.id}" ${i.id==itemId?'selected':''} data-available="${i.quantity}">${i.name}</option>`)
-                .join('');
+                .filter(item => item.status !== 'expired')
+                .sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date))
+                .map(item => {
+                    const expiryLabel = item.expiry_date ? ` (Exp: ${new Date(item.expiry_date).toISOString().split('T')[0]})` : '';
+                    const unitLabel = item.unit ? ` ${item.unit}` : '';
+                    return `<option value="${item.id}" data-available="${item.quantity}" ${item.id == itemId ? 'selected' : ''}>
+                                ${item.name}${expiryLabel}${unitLabel ? ' - ' + unitLabel : ''}
+                            </option>`;
+                }).join('');
 
             return `
                 <div class="mb-2 d-flex align-items-center mt-1">
@@ -219,7 +225,6 @@
                 const select = e.target;
                 const customInput = td.querySelector('.custom-recipe-input');
 
-                // Warn if custom exists
                 if(customInput && customInput.value.trim()!==''){
                     const result = await Swal.fire({
                         title: "Replace Custom Meal?",
@@ -237,19 +242,18 @@
                     }
                 }
 
-                // Clear previous ingredients
                 const ingredientList = td.querySelector('.ingredient-list');
                 ingredientList.querySelectorAll('.mb-2').forEach(el=>el.remove());
 
-                // Autofill recipe ingredients
                 const selectedOption = select.selectedOptions[0];
                 const ingredientsData = selectedOption.dataset.ingredients ? JSON.parse(selectedOption.dataset.ingredients) : [];
 
                 // Check availability
-                const insufficient = ingredientsData.some(ing=>{
-                    const match = inventoryItems.find(i=>i.id==ing.inventory_item_id);
-                    const qty = ing.quantity_used??1;
-                    return !match || match.status==='expired' || qty>match.quantity;
+                const insufficient = ingredientsData.some(ing => {
+                    const inventoryItem = inventoryItems.find(i => i.name === ing.name && i.status !== 'expired');
+                    const availableQty = inventoryItem ? Number(inventoryItem.quantity || 0) : 0;
+                    const neededQty = Number(ing.quantity_used ?? 1);
+                    return availableQty < neededQty;
                 });
 
                 if(insufficient){
@@ -262,9 +266,12 @@
                     return;
                 }
 
-                // Add ingredients
+                // Add ingredients with correct inventory item selected
                 ingredientsData.forEach((ing, idx)=>{
-                    ingredientList.insertAdjacentHTML('beforeend', createIngredientRow(mealIndex, idx, ing.inventory_item_id, ing.quantity_used));
+                    const matchedItem = inventoryItems.find(i => i.name === ing.name && i.status !== 'expired');
+                    const itemId = matchedItem ? matchedItem.id : '';
+                    const qtyUsed = ing.quantity_used ?? '';
+                    ingredientList.insertAdjacentHTML('beforeend', createIngredientRow(mealIndex, idx, itemId, qtyUsed));
                 });
             }
 
@@ -311,9 +318,7 @@
                 const recipeSelect = td.querySelector('.recipe-select');
                 const customValue = input.value.trim();
 
-                // If no recipe selected but custom meal typed in
                 if (!recipeSelect.value && customValue !== '') {
-                    // Explicitly set the select's value and create an option that will be submitted
                     let opt = recipeSelect.querySelector(`option[value="${customValue}"]`);
                     if (!opt) {
                         opt = document.createElement('option');
@@ -322,7 +327,7 @@
                         recipeSelect.appendChild(opt);
                     }
                     opt.selected = true;
-                    recipeSelect.value = customValue; // <-- this line ensures it’s recognized
+                    recipeSelect.value = customValue;
                 }
             });
         });
@@ -333,4 +338,5 @@
         }
     });
     </script>
+
 </x-app-layout>

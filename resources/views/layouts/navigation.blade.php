@@ -21,6 +21,9 @@
                     <x-nav-link :href="route('mealplans.index')" :active="request()->routeIs('mealplans.*')">
                         {{ __('Meal Plan') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('analytics.index')" :active="request()->routeIs('analytics.*')">
+                        {{ __('Track and Report') }}
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -96,8 +99,11 @@
             <x-responsive-nav-link :href="route('inventory.index')" :active="request()->routeIs('inventory.*')">
                 {{ __('Food Inventory') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('mealplans.index')" :active="request()->routeIs('inventory.*')">
+            <x-responsive-nav-link :href="route('mealplans.index')" :active="request()->routeIs('mealplans.*')">
                 {{ __('Meal Plan') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('analytics.index')" :active="request()->routeIs('analytics.*')">
+                {{ __('Track and Report') }}
             </x-responsive-nav-link>
 
             <!-- 🔔 Notifications (for mobile) -->

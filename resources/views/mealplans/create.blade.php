@@ -92,9 +92,15 @@
         // ============================
         const itemOptions = inventoryItems
             .filter(item => item.status !== 'expired')
-            .map(item =>
-                `<option value="${item.id}" data-available="${item.quantity}">${item.name}</option>`
-            ).join('');
+            .sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date)) // earliest expiry first
+            .map(item => {
+                const expiryLabel = item.expiry_date ? ` (Exp: ${new Date(item.expiry_date).toISOString().split('T')[0]})` : '';
+                const unitLabel = item.unit ? ` ${item.unit}` : '';
+                return `<option value="${item.id}" data-available="${item.quantity}">
+                            ${item.name}${expiryLabel} - ${unitLabel}
+                        </option>`;
+            }).join('');
+
 
         // ============================
         // GENERATE WEEKLY PLAN TABLE

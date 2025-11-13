@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('notifications', function (Blueprint $table) {
-            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
+        Schema::table('inventory_items', function (Blueprint $table) {
+            $table->integer('original_quantity')->nullable();
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('notifications', function (Blueprint $table) {
-            //
+        Schema::table('inventory_items', function (Blueprint $table) {
+            $table->dropColumn('original_quantity');
         });
     }
 };

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\InventoryItem;
 use App\Models\Donation;
 use App\Models\Notification;
+use App\Models\Waste;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -13,7 +14,6 @@ class InventoryController extends Controller
 {
     public function index()
     {
-        // ✅ 确保已登录
         if (!Auth::check()) {
             return redirect()->route('login')->with('error', 'Please log in first.');
         }
@@ -22,13 +22,39 @@ class InventoryController extends Controller
         $today = Carbon::today();
         $threeDaysLater = $today->copy()->addDays(3);
 
-        // ✅ Update already expired items
-        InventoryItem::where('user_id', $userId)
+        // 1️⃣ Automatically track expired items as waste
+        $expiredItems = InventoryItem::where('user_id', $userId)
             ->whereNotNull('expiry_date')
             ->where('expiry_date', '<', $today)
-            ->update(['status' => 'expired']);
+            ->where('status', '!=', 'expired')
+            ->get();
 
-        // ✅ 检查 3 天内即将过期的物品
+        foreach ($expiredItems as $item) {
+            // Skip if quantity already 0
+            if ($item->quantity <= 0) continue;
+
+            // Skip if already logged in waste table
+            if (Waste::where('inventory_item_id', $item->id)->exists()) continue;
+
+            // Save new waste record
+            Waste::create([
+                'user_id' => $userId,
+                'inventory_item_id' => $item->id,
+                'item_name' => $item->name,
+                'category' => $item->category,
+                'quantity_wasted' => $item->quantity,
+                'unit' => $item->unit,
+                'date_expired' => $item->expiry_date,
+            ]);
+
+            // Mark expired
+            $item->status = 'expired';
+            $item->quantity = 0;
+            $item->save();
+        }
+
+
+        // 2️⃣ Notify about items expiring in 3 days
         $expiringItems = InventoryItem::where('user_id', $userId)
             ->whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [$today, $threeDaysLater])
@@ -45,19 +71,17 @@ class InventoryController extends Controller
                 $daysLeft = Carbon::parse($item->expiry_date)->diffInDays($today, false);
                 if ($daysLeft < 0) $daysLeft = abs($daysLeft);
 
-                // ✅ 确保 user_id 不为空
-                if ($userId) {
-                    Notification::create([
-                        'user_id' => $userId,
-                        'item_name' => $item->name,
-                        'message' => $item->name . ' will expire in ' . $daysLeft . ' day' . ($daysLeft > 1 ? 's' : ''),
-                        'expiry_date' => $item->expiry_date,
-                        'status' => 'new',
-                    ]);
-                }
+                Notification::create([
+                    'user_id' => $userId,
+                    'item_name' => $item->name,
+                    'message' => $item->name . ' will expire in ' . $daysLeft . ' day' . ($daysLeft > 1 ? 's' : ''),
+                    'expiry_date' => $item->expiry_date,
+                    'status' => 'new',
+                ]);
             }
         }
 
+        // 3️⃣ Retrieve current inventory
         $items = InventoryItem::where('user_id', $userId)
             ->orderBy('expiry_date', 'asc')
             ->with('user')
@@ -85,6 +109,7 @@ class InventoryController extends Controller
             'name' => $validated['name'],
             'category' => $validated['category'] ?? null,
             'quantity' => $validated['quantity'],
+            'original_quantity' => $validated['quantity'], // track original purchased amount
             'unit' => $validated['unit'],
             'expiry_date' => $validated['expiry_date'] ?? null,
             'status' => 'available',
@@ -112,6 +137,10 @@ class InventoryController extends Controller
         ]);
 
         $item->update($validated);
+
+        // Optional: update original_quantity if you want to reset it on update
+        // $item->original_quantity = $validated['quantity'];
+        // $item->save();
 
         return redirect()->route('inventory.index')->with('success', 'Item updated successfully!');
     }

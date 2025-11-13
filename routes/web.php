@@ -9,6 +9,7 @@ use App\Http\Controllers\DonationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\BrowseController;
 use App\Http\Controllers\MealPlanController;
+use App\Http\Controllers\AnalyticsController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -84,6 +85,9 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/mealplans/{mealPlan}', [MealPlanController::class, 'update'])->name('mealplans.update');
     Route::delete('/mealplans/{mealPlan}', [MealPlanController::class, 'destroy'])->name('mealplans.destroy');
     Route::get('/mealplans/{mealPlan}/show', [MealPlanController::class, 'show'])->name('mealplans.show');
+
+    Route::get('/analytics', [AnalyticsController::class, 'index'])
+    ->name('analytics.index');
 });
 
 // ✅ Auth routes
