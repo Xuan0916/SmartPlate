@@ -19,7 +19,7 @@ class AnalyticsController extends Controller
             ->whereNull('deleted_at')
             ->get();
 
-        // ✅ Waste (include all, no soft deletes)
+        // ✅ Waste
         $totalWaste = Waste::where('user_id', $userId)->sum('quantity_wasted');
         $monthlyWaste = Waste::where('user_id', $userId)
             ->whereBetween('date_expired', [now()->startOfMonth(), now()->endOfMonth()])
@@ -31,13 +31,39 @@ class AnalyticsController extends Controller
             ->groupBy('category')
             ->get();
 
-        // ✅ Donations (no soft deletes)
-        $totalDonated = Donation::where('donor_id', $userId)->sum('quantity');
+        // ------------------------------
+        // 🔄 DONATIONS (OFFERED)
+        // ------------------------------
+
+        // Total Donated (All items the user offered as a donation)
+        $totalDonated = Donation::where('donor_id', $userId)
+            ->sum('quantity'); // ⬅️ New calculation for ALL donations
+
+        // Monthly Donated (All items the user offered this month)
         $monthlyDonated = Donation::where('donor_id', $userId)
             ->whereMonth('created_at', now()->month)
             ->sum('quantity');
 
-        // ✅ Used quantity
+        // ------------------------------
+        // 🔄 DONATIONS (REDEEMED) → Only REDEEMED or PICKED UP count as "saved"
+        // ------------------------------
+
+        $totalRedeemed = Donation::where('donor_id', $userId)
+            ->whereIn('status', ['redeemed', 'picked_up'])
+            // You should use updated_at here for accurate "saved" tracking
+            ->whereYear('updated_at', now()->year)
+            ->sum('quantity');
+
+        $monthlyRedeemed = Donation::where('donor_id', $userId)
+            ->whereIn('status', ['redeemed', 'picked_up'])
+            // You should use updated_at here for accurate "saved" tracking
+            ->whereMonth('updated_at', now()->month)
+            ->sum('quantity');
+
+        // ------------------------------
+        // 🔄 USED QUANTITY CALCULATION
+        // ------------------------------
+
         $usedQuantity = $inventoryItems->sum(function ($item) {
             $original = $item->original_quantity ?? $item->quantity;
             $used = $original - $item->quantity - ($item->reserved_quantity ?? 0);
@@ -52,22 +78,33 @@ class AnalyticsController extends Controller
                 return max($used, 0);
             });
 
-        // ✅ Food saved totals
-        $totalFoodSaved = $usedQuantity + $totalDonated;
-        $monthlyFoodSaved = $monthlyUsedQuantity + $monthlyDonated;
+        // ------------------------------
+        // 🔄 FOOD SAVED = USED + REDEEMED
+        // ------------------------------
 
-        // ✅ Percentages
+        $totalFoodSaved = $usedQuantity + $totalRedeemed;
+        $monthlyFoodSaved = $monthlyUsedQuantity + $monthlyRedeemed;
+
+        // ------------------------------
+        // 🔄 PERCENTAGES
+        // ------------------------------
+
         $totalActivity = $totalWaste + $totalFoodSaved;
-        $percentSavedTotal = $totalActivity > 0 ? round(($totalFoodSaved / $totalActivity) * 100, 2) : 0;
+        $percentSavedTotal = $totalActivity > 0
+            ? round(($totalFoodSaved / $totalActivity) * 100, 2)
+            : 0;
 
         $monthlyActivity = $monthlyWaste + $monthlyFoodSaved;
-        $percentSavedMonthly = $monthlyActivity > 0 ? round(($monthlyFoodSaved / $monthlyActivity) * 100, 2) : 0;
+        $percentSavedMonthly = $monthlyActivity > 0
+            ? round(($monthlyFoodSaved / $monthlyActivity) * 100, 2)
+            : 0;
 
         return view('analytics', compact(
             'totalWaste',
             'monthlyWaste',
             'wasteByCategory',
-            'totalDonated',
+            'totalRedeemed',
+            'totalDonated',       // 🔄 Added so you can show “Total Redeemed Donations”
             'totalFoodSaved',
             'monthlyFoodSaved',
             'percentSavedTotal',

@@ -40,7 +40,7 @@
                     <div class="card-body d-flex flex-column justify-content-center align-items-center text-white" 
                         style="height: 250px; background: linear-gradient(135deg, #f59e0b, #fcd34d);">
                         <h5 class="card-title fw-semibold mb-2">Total Meals Completed</h5>
-                        <h2 class="fw-bold fs-1">{{ $totalMeals ?? 0 }}</h2>
+                        <h2 class="fw-bold fs-1">{{ $totalMealsCompleted ?? 0 }}</h2>
                         <p class="text-light small mb-0 opacity-75">Since you joined</p>
                     </div>
                 </div>

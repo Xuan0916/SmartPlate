@@ -76,22 +76,31 @@
                                         </td>
                                         <td class="text-end">
                                             @php
-                                                $isOwner = Auth::check() && Auth::id() === $donation->user_id;
+                                                $isOwner = Auth::check() && Auth::id() === $donation->donor_id;
+                                                $expired = $donation->expiry_date && \Carbon\Carbon::parse($donation->expiry_date)->isPast();
                                             @endphp
 
                                             @if ($donation->status === 'available')
-                                                {{-- ✅ If the user is NOT the owner → show Redeem button --}}
-                                                @unless ($isOwner)
-                                                    <form action="{{ route('donation.redeem', $donation->id) }}" method="POST" style="display:inline;">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-outline-success btn-sm"
-                                                            onclick="return confirm('Do you confirm you want to redeem this item?')">
-                                                            Redeem
-                                                        </button>
-                                                    </form>
-                                                @endunless
+                                                
+                                                {{-- 🚫 If expired → disable redeem for everyone except owner (owner still sees Remove) --}}
+                                                @if ($expired)
+                                                    @unless ($isOwner)
+                                                        <button class="btn btn-secondary btn-sm" disabled>Expired</button>
+                                                    @endunless
+                                                @else
+                                                    {{-- 🟢 Redeem only if NOT owner and NOT expired --}}
+                                                    @unless ($isOwner)
+                                                        <form action="{{ route('donation.redeem', $donation->id) }}" method="POST" style="display:inline;">
+                                                            @csrf
+                                                            <button type="submit" class="btn btn-outline-success btn-sm"
+                                                                onclick="return confirm('Do you confirm you want to redeem this item?')">
+                                                                Redeem
+                                                            </button>
+                                                        </form>
+                                                    @endunless
+                                                @endif
 
-                                                {{-- ✅ If the user IS the owner → show Remove button --}}
+                                                {{-- 🗑 Owner always sees Remove --}}
                                                 @if ($isOwner)
                                                     <form action="{{ route('donation.destroy', $donation->id) }}" method="POST" style="display:inline;">
                                                         @csrf
@@ -102,8 +111,9 @@
                                                         </button>
                                                     </form>
                                                 @endif
+
                                             @else
-                                                {{-- ✅ Show disabled Redeemed button --}}
+                                                {{-- Redeemed --}}
                                                 <button class="btn btn-secondary btn-sm" disabled>Redeemed</button>
                                             @endif
                                         </td>
