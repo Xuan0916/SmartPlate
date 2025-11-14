@@ -62,4 +62,10 @@ class InventoryItem extends Model
     {
         return $this->hasMany(Donation::class);
     }
+
+    public function mealIngredients()
+    {
+        return $this->hasMany(MealIngredient::class, 'inventory_item_id');
+    }
+
 }

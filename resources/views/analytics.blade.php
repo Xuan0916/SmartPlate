@@ -4,31 +4,31 @@
 
             
             {{-- 1️⃣ KEY METRICS CARDS (Flexbox with FIXED Inline Widths and Styles) --}}
-            <div class="flex flex-wrap justify-between gap-4 mb-8">
-                
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 w-full">
+    
                 {{-- Total Food Saved Card --}}
-                <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #10b981; width: 250px;;">
+                <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #10b981;">
                     <p class="text-sm font-medium text-gray-500">Total Food Saved (All Time)</p>
                     <p class="text-3xl font-bold text-gray-900 mt-1">{{ $totalFoodSaved ?? 0 }} Units</p>
                     <p class="text-xs text-gray-400 mt-1">Via Usage & Donation</p>
                 </div>
-                
+
                 {{-- Total Waste Card --}}
-                <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #ef4444; width: 250px;;">
+                <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #ef4444;">
                     <p class="text-sm font-medium text-gray-500">Total Waste (All Time)</p>
                     <p class="text-3xl font-bold text-gray-900 mt-1">{{ $totalWaste ?? 0 }} Units</p>
                     <p class="text-xs text-gray-400 mt-1">Expired items tracked</p>
                 </div>
-                
+
                 {{-- Monthly Saved Percentage Card --}}
-                <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #3b82f6; width: 250px;">
+                <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #3b82f6;">
                     <p class="text-sm font-medium text-gray-500">Food Saved Percentage (This Month)</p>
                     <p class="text-3xl font-bold text-gray-900 mt-1">{{ $percentSavedMonthly ?? 0 }}%</p>
                     <p class="text-xs text-gray-400 mt-1">Of total monthly activity</p>
                 </div>
 
                 {{-- Total Donated Card --}}
-                <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #f59e0b; width: 250px;">
+                <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #f59e0b;">
                     <p class="text-sm font-medium text-gray-500">Total Donations Offered</p>
                     <p class="text-3xl font-bold text-gray-900 mt-1">{{ $totalDonated ?? 0 }} Units</p>
                     <p class="text-xs text-gray-400 mt-1">Items put up for donation</p>
@@ -37,11 +37,12 @@
             </div>
 
             {{-- 2️⃣ ROW 1: Food Saved & Donations Charts (2-column on MD and up) --}}
-            <div class="container flex flex-wrap justify-between mx-0 px-0 gap-2">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full mb-8">
 
                 {{-- Food Saved Chart (Left) --}}
-                <div class="bg-white p-6 shadow-lg rounded-xl" style="width:560px;">
+                <div class="bg-white p-6 shadow-lg rounded-xl w-full">
                     <h2 class="text-xl font-semibold mb-4 text-gray-700">Food Saved vs. Wasted (All Time)</h2>
+
                     @if(($totalUsed ?? 0) + ($totalWaste ?? 0) + ($totalDonated ?? 0) == 0)
                         <p class="text-gray-500 text-center py-20">
                             You have no food items yet. Let's start a meal plan!
@@ -52,8 +53,9 @@
                 </div>
 
                 {{-- Donations Chart (Right) --}}
-                <div class="bg-white p-6 shadow-lg rounded-xl" style="width:560px;">
+                <div class="bg-white p-6 shadow-lg rounded-xl w-full">
                     <h2 class="text-xl font-semibold mb-4 text-gray-700">Donations Overview</h2>
+
                     @if(($totalDonated ?? 0) == 0)
                         <p class="text-gray-500 text-center py-20">
                             You have not donated any items yet. Start donating to see stats here!
@@ -62,6 +64,7 @@
                         <canvas id="donationChart" height="200"></canvas>
                     @endif
                 </div>
+
             </div>
 
             {{-- 3️⃣ ROW 2: Waste Category Chart & Placeholder (2-column on MD and up) --}}

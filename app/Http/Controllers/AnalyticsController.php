@@ -66,17 +66,38 @@ class AnalyticsController extends Controller
 
         $usedQuantity = $inventoryItems->sum(function ($item) {
             $original = $item->original_quantity ?? $item->quantity;
-            $used = $original - $item->quantity - ($item->reserved_quantity ?? 0);
-            return max($used, 0);
+
+            // Base used logic
+            $used = $original - $item->quantity;
+
+            // Add reserved ingredients ONLY for past meals
+            $pastReserved = $item->mealIngredients()
+                ->whereHas('meal', function ($q) {
+                    $q->where('date', '<', today());
+                })
+                ->sum('quantity_used');
+
+            return max($used + $pastReserved, 0);
         });
+
 
         $monthlyUsedQuantity = $inventoryItems
             ->filter(fn($item) => $item->created_at->month === now()->month)
             ->sum(function ($item) {
                 $original = $item->original_quantity ?? $item->quantity;
-                $used = $original - $item->quantity - ($item->reserved_quantity ?? 0);
-                return max($used, 0);
+
+                $used = $original - $item->quantity;
+
+                // Count only past-reserved items (this month)
+                $pastReserved = $item->mealIngredients()
+                    ->whereHas('meal', function ($q) {
+                        $q->where('date', '<', today());
+                    })
+                    ->sum('quantity_used');
+
+                return max($used + $pastReserved, 0);
             });
+
 
         // ------------------------------
         // 🔄 FOOD SAVED = USED + REDEEMED
