@@ -51,7 +51,7 @@
                                             <span class="badge bg-secondary">READ</span>
                                         @endif
                                     </td>
-                                    <td>
+                                    <td style="max-width: 500px;">
                                         <strong>{{ $note->item_name }}</strong> — {{ $note->message }}
                                     </td>
                                     <td>

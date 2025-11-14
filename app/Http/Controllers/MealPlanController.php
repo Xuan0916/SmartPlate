@@ -33,13 +33,16 @@ class MealPlanController extends Controller
     {
         $inventoryItems = InventoryItem::where('user_id', Auth::id())
             ->where('status', '!=', 'expired')
+            ->where(function ($query) {
+                $query->whereNull('reserved_quantity')
+                    ->orWhereColumn('quantity', '>', 'reserved_quantity'); // only show items with available stock
+            })
             ->get()
             ->map(function ($item) {
-                // Calculate available quantity
                 $reserved = $item->reserved_quantity ?? 0;
                 $available = max($item->quantity - $reserved, 0);
 
-                // Replace quantity value with available
+                // Replace quantity with available
                 $item->quantity = $available;
                 return $item;
             });
@@ -136,7 +139,7 @@ class MealPlanController extends Controller
                 if ($inventoryItem) {
                     $availableQty = $inventoryItem->quantity;
                     if ($quantityUsed > $availableQty) {
-                        throw \Illuminate\Validation\ValidationException::withMessages([
+                        throw ValidationException::withMessages([
                             'meals' => "You only have {$availableQty} units of {$inventoryItem->name} available."
                         ]);
                     }
@@ -183,14 +186,19 @@ class MealPlanController extends Controller
 
         $inventoryItems = InventoryItem::where('user_id', Auth::id())
             ->where('status', '!=', 'expired')
+            ->where(function ($query) {
+                $query->whereNull('reserved_quantity')
+                    ->orWhereColumn('quantity', '>', 'reserved_quantity'); // only show items with available stock
+            })
             ->get()
             ->map(function ($item) {
                 $reserved = $item->reserved_quantity ?? 0;
                 $available = max($item->quantity - $reserved, 0);
+
+                // Replace quantity with available
                 $item->quantity = $available;
                 return $item;
             });
-
         // ✅ Same hardcoded recipes
         $recipes = [
             [
@@ -274,7 +282,7 @@ class MealPlanController extends Controller
                 $quantityUsed = $ingredient['quantity_used'] ?? 1;
                 if ($item) {
                     if ($quantityUsed > $item->quantity) {
-                        throw \Illuminate\Validation\ValidationException::withMessages([
+                        throw ValidationException::withMessages([
                             'meals' => "You only have {$item->quantity} units of {$item->name} available."
                         ]);
                     }
@@ -295,7 +303,7 @@ class MealPlanController extends Controller
                 $meal->ingredients()->createMany($ingredients);
             }
 
-            \App\Models\Notification::create([
+            Notification::create([
                 'user_id' => Auth::id(),
                 'item_name' => $meal['recipe_name'] ?? 'Custom Meal',
                 'message' => "Reminder: You have \"" . ($meal['recipe_name'] ?? 'Custom Meal') . "\" scheduled for {$meal['date']}",
