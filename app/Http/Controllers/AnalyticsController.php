@@ -65,38 +65,42 @@ class AnalyticsController extends Controller
         // ------------------------------
 
         $usedQuantity = $inventoryItems->sum(function ($item) {
-            $original = $item->original_quantity ?? $item->quantity;
 
-            // Base used logic
-            $used = $original - $item->quantity;
-
+            // Removed the $original and $used calculations entirely.
+            
             // Add reserved ingredients ONLY for past meals
             $pastReserved = $item->mealIngredients()
                 ->whereHas('meal', function ($q) {
-                    $q->where('date', '<', today());
+                    // Using today() here is correct for filtering meals that are 'past' (i.e., date < today)
+                    $q->where('date', '<', today()); 
                 })
                 ->sum('quantity_used');
 
-            return max($used + $pastReserved, 0);
+            // Return only the past reserved quantity
+            return max($pastReserved, 0); 
         });
 
 
-        $monthlyUsedQuantity = $inventoryItems
-            ->filter(fn($item) => $item->created_at->month === now()->month)
-            ->sum(function ($item) {
-                $original = $item->original_quantity ?? $item->quantity;
+        $monthlyUsedQuantity = $inventoryItems->sum(function ($item) {
+    
+            // Calculate reserved ingredients ONLY for past meals AND this month
+            $monthlyPastReserved = $item->mealIngredients()
+                ->whereHas('meal', function ($q) {
+                    
+                    // 1. Ensure the meal is in the past
+                    $q->where('date', '<', today()); 
+                    
+                    // 2. Ensure the meal occurred in the current month
+                    $q->whereMonth('date', now()->month); 
+                    
+                    // 3. (Optional but good practice) Ensure the meal occurred in the current year
+                    $q->whereYear('date', now()->year);
+                })
+                ->sum('quantity_used');
 
-                $used = $original - $item->quantity;
-
-                // Count only past-reserved items (this month)
-                $pastReserved = $item->mealIngredients()
-                    ->whereHas('meal', function ($q) {
-                        $q->where('date', '<', today());
-                    })
-                    ->sum('quantity_used');
-
-                return max($used + $pastReserved, 0);
-            });
+            // Return only the monthly past reserved quantity
+            return max($monthlyPastReserved, 0); 
+        });
 
 
         // ------------------------------

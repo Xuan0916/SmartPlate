@@ -120,8 +120,11 @@
                                     @forelse ($items as $item)
                                         @php
                                             $reserved = $item->reserved_quantity ?? 0;
-                                            $available = max($item->quantity - $reserved, 0);
-                                            $percent = $item->quantity > 0 ? round(($reserved / $item->quantity) * 100) : 0;
+                                            $available = $item->quantity;  
+                                            $percent = $item->original_quantity > 0 
+                                                ? round(($reserved / $item->original_quantity) * 100) 
+                                                : 0;
+
 
                                             // Color logic for progress bar
                                             $barColor = $percent < 40 ? 'bg-success' : ($percent < 80 ? 'bg-warning' : 'bg-danger');
@@ -132,7 +135,7 @@
                                             <td>{{ $item->category ?? '-' }}</td>
                                             <td>
                                                 <div>
-                                                    <strong>{{ $available }}</strong> / {{ $item->quantity }} {{ $item->unit }}
+                                                    <strong>{{ $available }}</strong> / {{ $item->original_quantity }} {{ $item->unit }}
                                                     @if ($reserved > 0)
                                                         <div class="small text-muted mt-1">
                                                             Reserved: {{ $reserved }} ({{ $percent }}%)
