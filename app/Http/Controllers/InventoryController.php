@@ -75,7 +75,7 @@ class InventoryController extends Controller
                     'user_id' => $userId,
                     'item_name' => $item->name,
                     'message' => $item->name . ' will expire in ' . $daysLeft . ' day' . ($daysLeft > 1 ? 's' : ''),
-                    'expiry_date' => $item->expiry_date,
+                    'expiry_date' => now(),
                     'status' => 'new',
                 ]);
             }
@@ -148,6 +148,7 @@ class InventoryController extends Controller
     public function destroy($id)
     {
         $item = InventoryItem::findOrFail($id);
+        Waste::where('inventory_item_id', $item->id)->delete();
         $item->delete();
         return redirect()->route('inventory.index')->with('success', 'Item deleted successfully!');
     }

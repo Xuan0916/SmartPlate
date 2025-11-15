@@ -6,17 +6,21 @@
             {{-- 1️⃣ KEY METRICS CARDS (Flexbox with FIXED Inline Widths and Styles) --}}
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 w-full">
     
-                {{-- Total Food Saved Card --}}
+                {{-- Monthly Food Saved Card --}}
                 <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #10b981;">
-                    <p class="text-sm font-medium text-gray-500">Total Food Saved (All Time)</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $totalFoodSaved ?? 0 }} Units</p>
+                    {{-- CHANGED TEXT --}}
+                    <p class="text-sm font-medium text-gray-500">Food Saved (This Month) 🗓️</p>
+                    {{-- CHANGED VARIABLE --}}
+                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $monthlyFoodSaved ?? 0 }} Units</p>
                     <p class="text-xs text-gray-400 mt-1">Via Usage & Donation</p>
                 </div>
 
-                {{-- Total Waste Card --}}
+                {{-- Monthly Waste Card --}}
                 <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #ef4444;">
-                    <p class="text-sm font-medium text-gray-500">Total Waste (All Time)</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $totalWaste ?? 0 }} Units</p>
+                    {{-- CHANGED TEXT --}}
+                    <p class="text-sm font-medium text-gray-500">Waste (This Month) 🗑️</p>
+                    {{-- CHANGED VARIABLE --}}
+                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $monthlyWaste ?? 0 }} Units</p>
                     <p class="text-xs text-gray-400 mt-1">Expired items tracked</p>
                 </div>
 

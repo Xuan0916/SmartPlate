@@ -16,7 +16,7 @@ class DonationController extends Controller
     public function index()
     {
         $this->handleExpiredDonations();
-        
+
         $donations = Donation::latest()->get();
         return view('managefoodinventory.donation', compact('donations'));
     }
@@ -128,6 +128,7 @@ class DonationController extends Controller
             'name' => $donation->item_name,
             'category' => $donation->category,
             'quantity' => $donation->quantity,
+            'original_quantity' => $donation->quantity, 
             'unit' => $donation->unit,
             'expiry_date' => $donation->expiry_date,
         ]);

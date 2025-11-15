@@ -42,6 +42,9 @@
                             </tr>
                         </thead>
                         <tbody>
+                            @php
+                                $notifications = $notifications->sortByDesc('expiry_date');
+                            @endphp
                             @forelse ($notifications as $note)
                                 <tr>
                                     <td>

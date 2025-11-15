@@ -10,6 +10,7 @@ use App\Models\InventoryItem;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use App\Models\Notification;
+use Carbon\Carbon;
 
 class MealPlanController extends Controller
 {
@@ -164,7 +165,7 @@ class MealPlanController extends Controller
             }
 
             // 3️⃣ Optional: Notification
-            $reminderDate = \Carbon\Carbon::parse($meal->date)->subDay();
+            $reminderDate = Carbon::parse($meal->date)->subDay();
             Notification::create([
                 'user_id' => Auth::id(),
                 'item_name' => $meal->recipe_name,
@@ -302,14 +303,6 @@ class MealPlanController extends Controller
             if (!empty($ingredients)) {
                 $meal->ingredients()->createMany($ingredients);
             }
-
-            Notification::create([
-                'user_id' => Auth::id(),
-                'item_name' => $meal['recipe_name'] ?? 'Custom Meal',
-                'message' => "Reminder: You have \"" . ($meal['recipe_name'] ?? 'Custom Meal') . "\" scheduled for {$meal['date']}",
-                'expiry_date' => now()->addDays(3),
-                'status' => 'new',
-            ]);
         }
 
         return redirect()->route('mealplans.index')->with('success', 'Meal plan updated successfully!');
