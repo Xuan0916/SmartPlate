@@ -144,7 +144,9 @@ class InventoryController extends Controller
             'expiry_date' => 'nullable|date',
         ]);
 
-        $item->update($validated);
+        $item->update(array_merge($validated, [
+            'original_quantity' => $validated['quantity'],
+        ]));
 
         return redirect()->route('inventory.index')->with('success', 'Item updated successfully!');
     }

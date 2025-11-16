@@ -47,11 +47,14 @@
                             </button>
                         @endif
 
-                        <a href="{{ route('mealplans.edit', $mealPlan) }}" class="btn btn-secondary mx-2">
+                        <a href="{{ route('mealplans.edit', $mealPlan) }}" class="btn btn-success mx-2">
                             Edit Plan
                         </a>
                         <a href="{{ route('mealplans.create') }}" class="btn btn-primary">
                             + Plan New Week
+                        </a>
+                        <a href="{{ route('mealplans.index') }}" class="btn btn-secondary">
+                            &larr; Back to Index
                         </a>
                     </div>
                 </div>

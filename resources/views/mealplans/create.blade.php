@@ -74,6 +74,12 @@
         const nextWeekBtn = document.getElementById('nextWeekBtn');
         const weeklyPlan = document.getElementById('weeklyPlan');
 
+        // Disable Prev Week button permanently
+        prevWeekBtn.disabled = true;
+        prevWeekBtn.classList.add('disabled', 'btn-secondary');
+        prevWeekBtn.style.pointerEvents = 'none';
+        prevWeekBtn.style.opacity = '0.5';
+
         // ============================
         // DATE UTILITIES
         // ============================
@@ -92,7 +98,7 @@
         // ============================
         const itemOptions = inventoryItems
             .filter(item => item.status !== 'expired')
-            .sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date)) // earliest expiry first
+            .sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date))
             .map(item => {
                 const expiryLabel = item.expiry_date ? ` (Exp: ${new Date(item.expiry_date).toISOString().split('T')[0]})` : '';
                 const unitLabel = item.unit ? ` ${item.unit}` : '';
@@ -100,7 +106,6 @@
                             ${item.name}${expiryLabel} - ${unitLabel}
                         </option>`;
             }).join('');
-
 
         // ============================
         // GENERATE WEEKLY PLAN TABLE
@@ -114,6 +119,7 @@
             weekRangeSpan.textContent = `${formatDate(startDate)} — ${formatDate(endDate)}`;
 
             const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+            const today = new Date();
 
             for (let i = 0; i < 7; i++) {
                 const current = new Date(startDate);
@@ -126,35 +132,42 @@
 
                 mealTypes.forEach(type => {
                     const mealIndex = `${i}_${type}`;
-                    row += `
-                        <td class="p-1">
-                            <input type="hidden" name="meals[${mealIndex}][date]" value="${dateFormatted}">
-                            <input type="hidden" name="meals[${mealIndex}][meal_type]" value="${type}">
+                    const isPast = current < new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-                            <!-- Recipe Dropdown -->
-                            <select name="meals[${mealIndex}][recipe_name]" 
-                                class="form-select form-select-sm mb-2 text-xs recipe-select" 
-                                data-meal-index="${mealIndex}">
-                                <option value="">-- Select Recipe --</option>
-                                @foreach ($recipes as $recipe)
-                                    <option value="{{ $recipe['name'] }}" data-ingredients='@json($recipe['ingredients'])'>
-                                        {{ $recipe['name'] }}
-                                    </option>
-                                @endforeach
-                            </select>
+                    row += `<td class="p-1">
+                        <input type="hidden" name="meals[${mealIndex}][date]" value="${dateFormatted}">
+                        <input type="hidden" name="meals[${mealIndex}][meal_type]" value="${type}">
 
-                            <!-- Optional Custom Recipe -->
-                            <input type="text" 
-                                name="meals[${mealIndex}][custom_recipe_name]" 
-                                class="form-control form-control-sm mb-2 text-xs custom-recipe-input" 
-                                placeholder="Custom Meal Plan (optional)">
+                        <!-- Hidden inputs to always submit keys -->
+                        <input type="hidden" name="meals[${mealIndex}][recipe_name]" value="">
+                        <input type="hidden" name="meals[${mealIndex}][custom_recipe_name]" value="">
 
-                            <div class="ingredient-list" data-meal-index="${mealIndex}">
-                                <button type="button" class="btn btn-sm btn-outline-primary add-ingredient mt-1" data-meal-index="${mealIndex}">
-                                    + Add Ingredient
-                                </button>
-                            </div>
-                        </td>`;
+                        <!-- Recipe Dropdown -->
+                        <select name="meals[${mealIndex}][recipe_name]" 
+                            class="form-select form-select-sm mb-2 text-xs recipe-select" 
+                            data-meal-index="${mealIndex}" ${isPast ? 'disabled' : ''}>
+                            <option value="">-- Select Recipe --</option>
+                            @foreach ($recipes as $recipe)
+                                <option value="{{ $recipe['name'] }}" data-ingredients='@json($recipe['ingredients'])'>
+                                    {{ $recipe['name'] }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <!-- Optional Custom Recipe -->
+                        <input type="text" 
+                            name="meals[${mealIndex}][custom_recipe_name]" 
+                            class="form-control form-control-sm mb-2 text-xs custom-recipe-input" 
+                            placeholder="Custom Meal Plan (optional)" ${isPast ? 'disabled' : ''}>
+
+                        <div class="ingredient-list" data-meal-index="${mealIndex}">
+                            <button type="button" class="btn btn-sm btn-outline-primary add-ingredient mt-1" 
+                                data-meal-index="${mealIndex}" 
+                                ${isPast ? 'disabled style="pointer-events:none; opacity:0.5;"' : ''}>
+                                + Add Ingredient
+                            </button>
+                        </div>
+                    </td>`;
                 });
 
                 row += `</tr>`;
@@ -174,7 +187,6 @@
             generatePlan(currentWeekStart);
         }
 
-        prevWeekBtn.addEventListener('click', () => navigateWeek(-1));
         nextWeekBtn.addEventListener('click', () => navigateWeek(1));
         todayWeekBtn.addEventListener('click', () => {
             currentWeekStart = getMonday(new Date());
@@ -222,17 +234,22 @@
         // ============================
         // LIMIT QUANTITY BASED ON STOCK
         // ============================
-        weeklyPlan.addEventListener('change', function (e) {
+        weeklyPlan.addEventListener('change', function(e) {
             if (e.target.matches('select[name*="[inventory_item_id]"]')) {
                 const select = e.target;
-                const available = select.selectedOptions[0]?.dataset.available || 0;
+                const ingredientId = select.value;
                 const qtyInput = select.closest('.mb-2').querySelector('input[name*="[quantity_used]"]');
+
+                const inventoryItem = inventoryItems.find(i => i.id == ingredientId);
+                const available = inventoryItem ? inventoryItem.quantity : 0;
+
                 qtyInput.setAttribute('max', available);
                 qtyInput.setAttribute('min', 1);
                 qtyInput.placeholder = available > 0 ? `Max: ${available}` : 'Out of stock';
                 qtyInput.value = '';
             }
         });
+
 
         weeklyPlan.addEventListener('input', function (e) {
             if (e.target.matches('input[name*="[quantity_used]"]')) {

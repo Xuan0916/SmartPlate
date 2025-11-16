@@ -16,7 +16,36 @@ class MealPlanController extends Controller
 {
     public function index()
     {
-        $mealPlans = MealPlan::where('user_id', Auth::id())
+        $userId = Auth::id();
+        $today = Carbon::today();
+        $tomorrow = Carbon::tomorrow();
+
+        // --- 1️⃣ Send notifications for meals happening tomorrow ---
+        $mealsTomorrow = Meal::whereHas('mealPlan', fn($q) => $q->where('user_id', $userId))
+            ->where('date', $tomorrow->toDateString())
+            ->get();
+
+        foreach ($mealsTomorrow as $meal) {
+            // Check if a notification already exists today
+            $exists = Notification::where('user_id', $userId)
+                ->where('item_name', $meal->recipe_name)
+                ->where('message', 'like', '%scheduled for ' . $meal->date . '%')
+                ->whereDate('created_at', $today)
+                ->exists();
+
+            if (!$exists) {
+                Notification::create([
+                    'user_id' => $userId,
+                    'item_name' => $meal->recipe_name,
+                    'message' => 'Reminder: You have "' . $meal->recipe_name . '" scheduled for ' . $meal->date,
+                    'expiry_date' => $meal->date,
+                    'status' => 'new',
+                ]);
+            }
+        }
+
+        // --- 2️⃣ Load meal plans ---
+        $mealPlans = MealPlan::where('user_id', $userId)
             ->with(['meals.ingredients' => function($query) {
                 $query->whereHas('inventoryItem', function($q) {
                     $q->where('status', '!=', 'expired');
@@ -29,6 +58,7 @@ class MealPlanController extends Controller
 
         return view('mealplans.index', compact('mealPlans'));
     }
+
 
     public function create()
     {
