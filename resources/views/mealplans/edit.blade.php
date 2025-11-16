@@ -59,8 +59,8 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', async function () {
-        const inventoryItems = @json($inventoryItems); // all available inventory
-        const mealPlanData = @json($mealPlan->meals);  // existing saved meals
+        const inventoryItems = @json($inventoryItems); // all inventory
+        const mealPlanData = @json($mealPlan->meals);  // existing meals
         const recipeList = @json($recipes);            // all recipes
 
         const weekStartInput = document.getElementById('week_start');
@@ -71,8 +71,7 @@
 
         // Build lookup for existing meals
         const mealsLookup = mealPlanData.reduce((acc, meal) => {
-            const key = `${meal.date}_${meal.meal_type}`;
-            acc[key] = meal;
+            acc[`${meal.date}_${meal.meal_type}`] = meal;
             return acc;
         }, {});
 
@@ -83,33 +82,34 @@
         // Generate ingredient row HTML
         function createIngredientRow(mealIndex, idx, itemId = '', qtyUsed = '') {
             const selectedItem = inventoryItems.find(i => i.id == itemId);
-            const maxQty = selectedItem ? selectedItem.quantity + Number(qtyUsed || 0) : 0; // <-- fix
-            const placeholder = itemId 
-                ? (maxQty > 0 ? `Max: ${maxQty}` : 'Out of stock') 
-                : 'Select an ingredient';
+            const availableQty = selectedItem ? selectedItem.quantity : 0;
+            const totalQty = selectedItem ? selectedItem.original_quantity : 0;
 
+            const placeholder = availableQty ? `Max: ${availableQty} / Total: ${totalQty}` : 'Out of stock';
+
+            // Build dropdown options (exclude zero-stock & expired)
             const optionsHtml = inventoryItems
-                .filter(item => item.status !== 'expired')
-                .sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date))
+                .filter(item => item.status !== 'expired' && item.quantity > 0)
+                .sort((a,b) => new Date(a.expiry_date) - new Date(b.expiry_date))
                 .map(item => {
                     const expiryLabel = item.expiry_date ? ` (Exp: ${new Date(item.expiry_date).toISOString().split('T')[0]})` : '';
                     const unitLabel = item.unit ? ` ${item.unit}` : '';
-                    return `<option value="${item.id}" data-available="${item.quantity}" ${item.id == itemId ? 'selected' : ''}>
-                                ${item.name}${expiryLabel}${unitLabel ? ' - ' + unitLabel : ''}
+                    return `<option value="${item.id}" data-available="${item.quantity}" data-original="${item.original_quantity}" ${item.id==itemId?'selected':''}>
+                                ${item.name}${expiryLabel}${unitLabel ? ' - ' + unitLabel : ''} [Available: ${item.quantity} / Total: ${item.original_quantity}]
                             </option>`;
                 }).join('');
 
             return `
                 <div class="mb-2 d-flex align-items-center mt-1">
                     <select name="meals[${mealIndex}][ingredients][${idx}][inventory_item_id]" 
-                        class="form-select form-select-sm me-1 text-xs ingredient-select" style="width:60%">
+                            class="form-select form-select-sm me-1 text-xs ingredient-select" style="width:60%">
                         <option value="">Select Ingredient</option>
                         ${optionsHtml}
                     </select>
                     <input type="number" name="meals[${mealIndex}][ingredients][${idx}][quantity_used]" 
                         class="form-control form-control-sm text-xs text-center qty-input" 
-                        style="width:40%" value="${qtyUsed}" min="1" max="${maxQty}" 
-                        placeholder="${placeholder}" ${maxQty===0 && itemId ? 'disabled' : ''}>
+                        style="width:40%" value="${qtyUsed}" min="1" max="${availableQty}" 
+                        placeholder="${placeholder}" ${availableQty===0 && itemId ? 'disabled' : ''}>
                     <button type="button" class="btn btn-sm btn-danger remove-ingredient ms-1">X</button>
                 </div>
             `;
@@ -122,8 +122,9 @@
             const endDate = new Date(startDate);
             endDate.setDate(startDate.getDate() + 6);
             weekRangeSpan.textContent = `${formatDate(startDate)} — ${formatDate(endDate)}`;
+
             const today = new Date();
-            today.setHours(0,0,0,0); // ignore time for comparison
+            today.setHours(0,0,0,0);
 
             for(let i=0;i<7;i++){
                 const current = new Date(startDate);
@@ -143,11 +144,8 @@
                     let customName = '';
                     if (existingMeal && existingMeal.recipe_name) {
                         const foundRecipe = recipeList.find(r => r.name === existingMeal.recipe_name);
-                        if (foundRecipe) {
-                            recipeName = existingMeal.recipe_name;
-                        } else {
-                            customName = existingMeal.recipe_name; // treat as custom
-                        }
+                        if (foundRecipe) recipeName = existingMeal.recipe_name;
+                        else customName = existingMeal.recipe_name;
                     }
 
                     const ingredients = existingMeal && existingMeal.ingredients.length>0 ? existingMeal.ingredients : [];
@@ -158,7 +156,6 @@
                         recipeOptions += `<option value="${r.name}" data-ingredients='${JSON.stringify(r.ingredients)}' ${r.name===recipeName?'selected':''}>${r.name}</option>`;
                     });
 
-                    // Determine if this meal is in the past
                     const isPast = current < today;
 
                     row += `<td class="p-1">
@@ -169,23 +166,27 @@
 
                         <select name="meals[${mealIndex}][recipe_name]" 
                             class="form-select form-select-sm mb-2 text-xs recipe-select" 
-                            data-meal-index="${mealIndex}" ${isPast ? 'disabled' : ''}>
+                            data-meal-index="${mealIndex}" ${isPast?'disabled':''}>
                             ${recipeOptions}
                         </select>
 
                         <input type="text" name="meals[${mealIndex}][custom_recipe_name]" 
                             class="form-control form-control-sm mb-2 text-xs custom-recipe-input" 
-                            placeholder="Custom Meal Plan (optional)" value="${customName}" ${isPast ? 'disabled' : ''}>
+                            placeholder="Custom Meal Plan (optional)" value="${customName}" ${isPast?'disabled':''}>
 
                         <div class="ingredient-list" data-meal-index="${mealIndex}">`;
 
                     ingredients.forEach((ing, idx)=>{
-                        row += createIngredientRow(mealIndex, idx, ing.inventory_item_id ?? '', ing.quantity_used ?? '', isPast);
+                        row += createIngredientRow(mealIndex, idx, ing.inventory_item_id ?? '', ing.quantity_used ?? '');
                     });
 
                     row += `<button type="button" class="btn btn-sm btn-outline-primary add-ingredient mt-1" 
-                                data-meal-index="${mealIndex}" ${isPast ? 'disabled style="pointer-events:none; opacity:0.5;"' : ''}>
+                                data-meal-index="${mealIndex}" ${isPast?'disabled style="pointer-events:none; opacity:0.5;"':''}>
                                 + Add Ingredient
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger reset-ingredients mt-1 ms-1" 
+                                data-meal-index="${mealIndex}" ${isPast?'disabled':''}>
+                                Reset
                             </button>
                         </div>
                     </td>`;
@@ -195,7 +196,8 @@
                 tbody.insertAdjacentHTML('beforeend', row);
             }
         }
-        // --- Add/remove ingredient dynamically ---
+
+        // Add/remove ingredient dynamically
         weeklyPlan.addEventListener('click', function(e){
             if(e.target.classList.contains('add-ingredient')){
                 const button = e.target;
@@ -207,31 +209,44 @@
             if(e.target.classList.contains('remove-ingredient')){
                 e.target.closest('.mb-2').remove();
             }
+            if (e.target.classList.contains('reset-ingredients')) {
+                const ingredientList = e.target.closest('.ingredient-list');
+                // Remove all ingredient input rows
+                ingredientList.querySelectorAll('.mb-2').forEach(el => el.remove());
+
+                const td = e.target.closest('td');
+                if (td) {
+                    // Clear recipe select
+                    const recipeSelect = td.querySelector('.recipe-select');
+                    if (recipeSelect) recipeSelect.value = '';
+
+                    // Clear custom recipe input
+                    const customInput = td.querySelector('.custom-recipe-input');
+                    if (customInput) customInput.value = '';
+                }
+            }
+
         });
 
-        // --- Dynamic ingredient quantity placeholder update ---
+        // Update ingredient quantity placeholder dynamically
         weeklyPlan.addEventListener('change', function(e){
-            if (e.target.classList.contains('ingredient-select')) {
+            if(e.target.classList.contains('ingredient-select')){
                 const select = e.target;
                 const selectedOption = select.selectedOptions[0];
                 const qtyInput = select.closest('.d-flex').querySelector('.qty-input');
-                const availableQty = parseFloat(selectedOption.dataset.available || 0);
-
-                qtyInput.max = availableQty;
-                qtyInput.placeholder = availableQty 
-                    ? `Max: ${availableQty}` 
-                    : 'Out of stock';
-                qtyInput.disabled = !availableQty;
+                const available = parseFloat(selectedOption.dataset.available || 0);
+                const total = parseFloat(selectedOption.dataset.original || 0);
+                qtyInput.max = available;
+                qtyInput.placeholder = available ? `Max: ${available} / Total: ${total}` : 'Out of stock';
+                qtyInput.disabled = !available;
             }
         });
 
-        // --- Handle recipe/custom meal conflicts & ingredient autofill ---
+        // Handle recipe/custom conflicts & autofill
         weeklyPlan.addEventListener('change', async function(e){
-            const td = e.target.closest('td');
-            if(!td) return;
-            const mealIndex = td.querySelector('.recipe-select').dataset.mealIndex;
+            const td = e.target.closest('td'); if(!td) return;
+            const mealIndex = td.querySelector('.recipe-select')?.dataset.mealIndex;
 
-            // Recipe selected
             if(e.target.classList.contains('recipe-select')){
                 const select = e.target;
                 const customInput = td.querySelector('.custom-recipe-input');
@@ -245,12 +260,7 @@
                         confirmButtonText:"Yes, replace",
                         cancelButtonText:"Cancel"
                     });
-                    if(result.isConfirmed){
-                        customInput.value='';
-                    } else{
-                        select.value='';
-                        return;
-                    }
+                    if(result.isConfirmed) customInput.value=''; else { select.value=''; return; }
                 }
 
                 const ingredientList = td.querySelector('.ingredient-list');
@@ -259,39 +269,64 @@
                 const selectedOption = select.selectedOptions[0];
                 const ingredientsData = selectedOption.dataset.ingredients ? JSON.parse(selectedOption.dataset.ingredients) : [];
 
-                // Check availability
                 const insufficient = ingredientsData.some(ing => {
-                    const inventoryItem = inventoryItems.find(i => i.name === ing.name && i.status !== 'expired');
-                    const availableQty = inventoryItem ? Number(inventoryItem.quantity || 0) : 0;
-                    const neededQty = Number(ing.quantity_used ?? 1);
-                    return availableQty < neededQty;
+                    const matchingItems = inventoryItems
+                        .filter(i => i.name === ing.name && i.status !== 'expired' && i.quantity > 0);
+
+                    const totalAvailable = matchingItems.reduce((sum, item) => sum + Number(item.quantity), 0);
+
+                    return totalAvailable < Number(ing.quantity_used || 1);
                 });
 
-                if(insufficient){
+                if (insufficient) {
                     Swal.fire({
-                        icon:'warning',
-                        title:'Insufficient Ingredients',
-                        text:'This recipe cannot be added due to missing/insufficient ingredients.'
+                        icon: 'warning',
+                        title: 'Insufficient Ingredients',
+                        text: 'Recipe cannot be added due to low stock.'
                     });
-                    select.value='';
+                    select.value = '';
                     return;
                 }
 
-                // Add ingredients with correct inventory item selected
                 ingredientsData.forEach((ing, idx)=>{
-                    const matchedItem = inventoryItems.find(i => i.name === ing.name && i.status !== 'expired');
-                    const itemId = matchedItem ? matchedItem.id : '';
+                    // Find ALL inventory items with the same name and not expired
+                    const matchingItems = inventoryItems
+                        .filter(i => i.name === ing.name && i.status !== 'expired' && i.quantity > 0)
+                        .sort((a,b) => new Date(a.expiry_date) - new Date(b.expiry_date)); // earliest expiry first
+
+                    // Choose the best usable item
+                    // 1. item that has enough quantity
+                    // 2. otherwise fallback to highest available quantity but > 0
+                    let selectedItem = matchingItems.find(i => i.quantity >= ing.quantity_used);
+
+                    if (!selectedItem) {
+                        // fallback: choose the one with the most quantity
+                        selectedItem = matchingItems.length ? matchingItems[0] : null;
+                    }
+
+                    const itemId = selectedItem ? selectedItem.id : '';
                     const qtyUsed = ing.quantity_used ?? '';
                     ingredientList.insertAdjacentHTML('beforeend', createIngredientRow(mealIndex, idx, itemId, qtyUsed));
                 });
             }
 
-            // Custom meal input
+            
+
+            // Quantity enforcement
+            if(e.target.matches('input[type="number"]')){
+                const input = e.target;
+                const max = parseFloat(input.max);
+                if(max && input.value>max) Swal.fire({icon:'warning', title:'Quantity Limit Exceeded', text:`Max ${max}`}), input.value=max;
+                else if(input.value<1) input.value=1;
+            }
+        });
+
+        weeklyPlan.addEventListener('input', async function(e){
             if(e.target.classList.contains('custom-recipe-input')){
                 const input = e.target;
+                const td = input.closest('td');
                 const recipeSelect = td.querySelector('.recipe-select');
-
-                if(recipeSelect && recipeSelect.value && input.value.trim()!==''){
+                if(recipeSelect && recipeSelect.value.trim()!=='' && input.value.trim()!==''){
                     const result = await Swal.fire({
                         title:"Replace Recipe?",
                         text:"Typing a custom meal will remove selected recipe. Continue?",
@@ -303,51 +338,29 @@
                     if(result.isConfirmed){
                         recipeSelect.value='';
                         td.querySelectorAll('.ingredient-list .mb-2').forEach(el=>el.remove());
-                    } else{
-                        input.value='';
-                    }
-                }
-            }
-
-            // Quantity enforcement
-            if(e.target.matches('input[type="number"]')){
-                const input = e.target;
-                const max = parseFloat(input.max);
-                if(max && input.value>max){
-                    Swal.fire({icon:'warning', title:'Quantity Limit Exceeded', text:`Max ${max}`});
-                    input.value=max;
-                } else if(input.value<1){
-                    input.value=1;
+                        Swal.fire({toast:true, position:'top-end', icon:'info', title:'Recipe cleared', showConfirmButton:false, timer:1200});
+                    } else input.value='';
                 }
             }
         });
 
-        // --- Before form submit: move custom recipe name into recipe_name ---
-        document.querySelector('form').addEventListener('submit', function () {
-            document.querySelectorAll('.custom-recipe-input').forEach(input => {
+        // Before submit: ensure custom recipe is selected
+        document.querySelector('form').addEventListener('submit', function(){
+            document.querySelectorAll('.custom-recipe-input').forEach(input=>{
                 const td = input.closest('td');
                 const recipeSelect = td.querySelector('.recipe-select');
                 const customValue = input.value.trim();
-
-                if (!recipeSelect.value && customValue !== '') {
+                if(!recipeSelect.value && customValue!==''){
                     let opt = recipeSelect.querySelector(`option[value="${customValue}"]`);
-                    if (!opt) {
-                        opt = document.createElement('option');
-                        opt.value = customValue;
-                        opt.textContent = customValue;
-                        recipeSelect.appendChild(opt);
-                    }
-                    opt.selected = true;
-                    recipeSelect.value = customValue;
+                    if(!opt){ opt = document.createElement('option'); opt.value=customValue; opt.textContent=customValue; recipeSelect.appendChild(opt); }
+                    opt.selected = true; recipeSelect.value = customValue;
                 }
             });
         });
 
-        // --- Initial render ---
-        if(weekStartInput.value){
-            generatePlan(weekStartInput.value);
-        }
+        if(weekStartInput.value) generatePlan(weekStartInput.value);
     });
     </script>
+
 
 </x-app-layout>
