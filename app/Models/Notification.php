@@ -18,8 +18,8 @@ class Notification extends Model
         'message',
         'expiry_date',
         'status',
-        'target_type',   // ⭐ 必须添加
-        'target_id',     // ⭐ 必须添加
+        'target_type',   
+        'target_id',     
     ];
 
     /**
