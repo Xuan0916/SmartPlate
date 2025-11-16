@@ -12,7 +12,7 @@ use App\Models\Waste;
 
 class DonationController extends Controller
 {
-    // ✅ Show donation list
+    // Show donation list
     public function index()
     {
         $this->handleExpiredDonations();
@@ -21,54 +21,55 @@ class DonationController extends Controller
         return view('managefoodinventory.donation', compact('donations'));
     }
 
-    // ✅ Convert from inventory to donation
+    // Convert inventory item to donation
     public function convert(Request $request)
     {
-        // 登录安全检查
         if (!Auth::check()) {
             return redirect()->route('login')->with('error', 'Please log in first.');
         }
 
         $request->validate([
-            'item_id' => 'required|exists:inventory_items,id',
+            'item_id'         => 'required|exists:inventory_items,id',
             'pickup_location' => 'required|string|max:255',
             'pickup_duration' => 'required|string|max:255',
         ]);
 
         $item = InventoryItem::findOrFail($request->item_id);
 
-        // ✅ 创建 Donation
+        // Create donation
         $donation = Donation::create([
-            'donor_id' => Auth::id(),
-            'user_id' => Auth::id(),
-            'inventory_item_id' => $item->id,
-            'item_name' => $item->name,
-            'category' => $item->category,
-            'quantity' => $item->quantity,
-            'unit' => $item->unit,
-            'expiry_date' => $item->expiry_date,
-            'status' => 'available',
-            'pickup_location' => $request->pickup_location,
-            'pickup_duration' => $request->pickup_duration,
+            'donor_id'         => Auth::id(),
+            'user_id'          => Auth::id(),
+            'inventory_item_id'=> $item->id,
+            'item_name'        => $item->name,
+            'category'         => $item->category,
+            'quantity'         => $item->quantity,
+            'unit'             => $item->unit,
+            'expiry_date'      => $item->expiry_date,
+            'status'           => 'available',
+            'pickup_location'  => $request->pickup_location,
+            'pickup_duration'  => $request->pickup_duration,
         ]);
 
-        // ✅ 给捐赠者发私人通知
+        // Notification (donated)
         Notification::create([
-            'user_id' => Auth::id(),
-            'item_name' => $item->name,
-            'message' => 'You have successfully donated "' . $item->name . '".',
+            'user_id'     => Auth::id(),
+            'item_name'   => $item->name,
+            'message'     => 'You have successfully donated "' . $item->name . '".',
             'expiry_date' => now(),
-            'status' => 'new',
+            'status'      => 'new',
+            'target_type' => 'donation',
+            'target_id'   => $donation->id,
         ]);
 
-        // 从库存移除
+        // Remove inventory item
         $item->delete();
 
         return redirect()->route('donation.index')
             ->with('success', 'Item successfully converted to donation!');
     }
 
-    // ✅ Remove donation and return to inventory
+    // Delete donation and return to inventory
     public function destroy($id)
     {
         $donation = Donation::findOrFail($id);
@@ -78,29 +79,31 @@ class DonationController extends Controller
             if ($item) $item->restore();
         } else {
             InventoryItem::create([
-                'user_id' => $donation->donor_id,
-                'name' => $donation->item_name,
-                'quantity' => $donation->quantity ?? 1,
-                'unit' => $donation->unit ?? 'pcs',
-                'expiry_date' => $donation->expiry_date ?? now()->addDays(7),
+                'user_id'      => $donation->donor_id,
+                'name'         => $donation->item_name,
+                'quantity'     => $donation->quantity ?? 1,
+                'unit'         => $donation->unit ?? 'pcs',
+                'expiry_date'  => $donation->expiry_date ?? now()->addDays(7),
             ]);
         }
 
         $donation->delete();
 
         Notification::create([
-            'user_id' => $donation->donor_id,
-            'item_name' => $donation->item_name,
-            'message' => 'Your donation of "' . $donation->item_name . '" has been removed and returned to inventory.',
+            'user_id'     => $donation->donor_id,
+            'item_name'   => $donation->item_name,
+            'message'     => 'Your donation of "' . $donation->item_name . '" has been removed and returned to inventory.',
             'expiry_date' => now(),
-            'status' => 'new',
+            'status'      => 'new',
+            'target_type' => 'donation',
+            'target_id'   => $id, // donation still exists for this notification
         ]);
 
         return redirect()->route('donation.index')
             ->with('success', 'Donation removed and item returned to inventory.');
     }
 
-    // ✅ Redeem donation (claim)
+    // Redeem donation (claim)
     public function redeem($id)
     {
         if (!Auth::check()) {
@@ -113,7 +116,6 @@ class DonationController extends Controller
             return redirect()->back()->with('error', 'This item has already been redeemed.');
         }
 
-        // 🚫 Prevent redeem after expiry
         if ($donation->expiry_date && now()->greaterThan($donation->expiry_date)) {
             return redirect()->back()->with('error', 'This item has expired and cannot be redeemed.');
         }
@@ -124,41 +126,45 @@ class DonationController extends Controller
         ]);
 
         InventoryItem::create([
-            'user_id' => Auth::id(),
-            'name' => $donation->item_name,
-            'category' => $donation->category,
-            'quantity' => $donation->quantity,
-            'original_quantity' => $donation->quantity, 
-            'unit' => $donation->unit,
-            'expiry_date' => $donation->expiry_date,
+            'user_id'           => Auth::id(),
+            'name'              => $donation->item_name,
+            'category'          => $donation->category,
+            'quantity'          => $donation->quantity,
+            'original_quantity' => $donation->quantity,
+            'unit'              => $donation->unit,
+            'expiry_date'       => $donation->expiry_date,
         ]);
 
-        // ✅ 通知双方
+        // Notify donor
         Notification::create([
-            'user_id' => $donation->donor_id,
-            'item_name' => $donation->item_name,
-            'message' => 'Your item "' . $donation->item_name . '" has been claimed by another user. ' .
-                        'Pickup Location: ' . $donation->pickup_location . '. ' .
-                        'Pickup Duration: ' . $donation->pickup_duration . '.',
+            'user_id'     => $donation->donor_id,
+            'item_name'   => $donation->item_name,
+            'message'     => 'Your item "' . $donation->item_name . '" has been claimed by another user. '
+                            . 'Pickup Location: ' . $donation->pickup_location . '. '
+                            . 'Pickup Duration: ' . $donation->pickup_duration . '.',
             'expiry_date' => now(),
-            'status' => 'new',
+            'status'      => 'new',
+            'target_type' => 'donation',
+            'target_id'   => $donation->id,
         ]);
 
+        // Notify claimer
         Notification::create([
-            'user_id' => Auth::id(),
-            'item_name' => $donation->item_name,
-            'message' => 'You have successfully claimed "' . $donation->item_name . '". ' .
-                        'Pickup Location: ' . $donation->pickup_location . '. ' .
-                        'Pickup Duration: ' . $donation->pickup_duration . '.',
+            'user_id'     => Auth::id(),
+            'item_name'   => $donation->item_name,
+            'message'     => 'You have successfully claimed "' . $donation->item_name . '". '
+                            . 'Pickup Location: ' . $donation->pickup_location . '. '
+                            . 'Pickup Duration: ' . $donation->pickup_duration . '.',
             'expiry_date' => now(),
-            'status' => 'new',
+            'status'      => 'new',
+            'target_type' => 'donation',
+            'target_id'   => $donation->id,
         ]);
-
 
         return redirect()->back()->with('success', 'Item successfully redeemed and added to your inventory!');
     }
 
-    // ✅ Pickup donation (领取人确认取走)
+    // Pickup donation
     public function pickup($id)
     {
         if (!Auth::check()) {
@@ -173,63 +179,64 @@ class DonationController extends Controller
 
         $donation->update(['status' => 'picked_up']);
 
-        // ✅ 通知双方
         Notification::create([
-            'user_id' => $donation->donor_id,
-            'item_name' => $donation->item_name,
-            'message' => 'Your item "' . $donation->item_name . '" has been picked up.',
+            'user_id'     => $donation->donor_id,
+            'item_name'   => $donation->item_name,
+            'message'     => 'Your item "' . $donation->item_name . '" has been picked up.',
             'expiry_date' => now(),
-            'status' => 'new',
+            'status'      => 'new',
+            'target_type' => 'donation',
+            'target_id'   => $donation->id,
         ]);
 
         Notification::create([
-            'user_id' => $donation->user_id,
-            'item_name' => $donation->item_name,
-            'message' => 'You have successfully picked up "' . $donation->item_name . '".',
+            'user_id'     => $donation->user_id,
+            'item_name'   => $donation->item_name,
+            'message'     => 'You have successfully picked up "' . $donation->item_name . '".',
             'expiry_date' => now(),
-            'status' => 'new',
+            'status'      => 'new',
+            'target_type' => 'donation',
+            'target_id'   => $donation->id,
         ]);
 
         return redirect()->back()->with('success', 'Pickup confirmed successfully!');
     }
 
+    // Handle expired donations
     public function handleExpiredDonations()
     {
         $today = Carbon::today();
 
-        // Find donations that have expired AND are still 'available' (unclaimed)
         $expiredDonations = Donation::where('expiry_date', '<', $today)
-            ->where('status', 'available') // Only check donations that were never claimed
+            ->where('status', 'available')
             ->get();
 
         foreach ($expiredDonations as $donation) {
-            // Skip if quantity is already 0 or no item name
             if ($donation->quantity <= 0 || empty($donation->item_name)) continue;
 
-            // 1. Log as waste
             Waste::create([
-                'user_id' => $donation->donor_id,
-                'inventory_item_id' => $donation->inventory_item_id,
-                'item_name' => $donation->item_name,
-                'category' => $donation->category,
-                'quantity_wasted' => $donation->quantity,
-                'unit' => $donation->unit,
-                'date_expired' => $donation->expiry_date,
+                'user_id'            => $donation->donor_id,
+                'inventory_item_id'  => $donation->inventory_item_id,
+                'item_name'          => $donation->item_name,
+                'category'           => $donation->category,
+                'quantity_wasted'    => $donation->quantity,
+                'unit'               => $donation->unit,
+                'date_expired'       => $donation->expiry_date,
             ]);
 
-            // 2. Update the donation status to prevent re-logging and show it's expired
             $donation->update([
                 'status' => 'expired',
-                'quantity' => 0, // Set quantity to 0
+                'quantity' => 0,
             ]);
 
-            // 3. Notify the donor
             Notification::create([
-                'user_id' => $donation->donor_id,
-                'item_name' => $donation->item_name,
-                'message' => 'Your donation of "' . $donation->item_name . '" has expired and was logged as waste.',
+                'user_id'     => $donation->donor_id,
+                'item_name'   => $donation->item_name,
+                'message'     => 'Your donation of "' . $donation->item_name . '" has expired and was logged as waste.',
                 'expiry_date' => now(),
-                'status' => 'new',
+                'status'      => 'new',
+                'target_type' => 'donation',
+                'target_id'   => $donation->id,
             ]);
         }
     }

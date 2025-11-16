@@ -19,10 +19,10 @@ class MealPlanController extends Controller
         $mealPlans = MealPlan::where('user_id', Auth::id())
             ->with(['meals.ingredients' => function($query) {
                 $query->whereHas('inventoryItem', function($q) {
-                    $q->where('status', '!=', 'expired'); // exclude expired items
+                    $q->where('status', '!=', 'expired');
                 });
             }, 'meals.ingredients.inventoryItem' => function($query) {
-                $query->where('status', '!=', 'expired'); // exclude expired items
+                $query->where('status', '!=', 'expired');
             }])
             ->latest()
             ->get();
@@ -36,18 +36,16 @@ class MealPlanController extends Controller
             ->where('status', '!=', 'expired')
             ->where(function ($query) {
                 $query->whereNull('reserved_quantity')
-                    ->orWhereColumn('quantity', '>', 'reserved_quantity'); // only show items with available stock
+                    ->orWhereColumn('quantity', '>', 'reserved_quantity');
             })
             ->get()
             ->map(function ($item) {
                 $reserved = $item->reserved_quantity ?? 0;
                 $available = max($item->quantity - $reserved, 0);
-
-                // Replace quantity with available
                 $item->quantity = $available;
                 return $item;
             });
-        // ✅ Hardcoded recipes
+
         $recipes = [
             [
                 'name' => 'Fried Rice',
@@ -95,10 +93,9 @@ class MealPlanController extends Controller
             }
         ]);
 
-        $startDate = \Carbon\Carbon::parse($mealPlan->week_start);
+        $startDate = Carbon::parse($mealPlan->week_start);
         $endDate = $startDate->clone()->addDays(6);
 
-        // 🔹 Find previous and next plans (by week_start)
         $previousPlan = MealPlan::where('user_id', Auth::id())
             ->where('week_start', '<', $mealPlan->week_start)
             ->orderBy('week_start', 'desc')
@@ -125,34 +122,34 @@ class MealPlanController extends Controller
         ]);
 
         foreach ($request->meals as $mealData) {
+
             $ingredients = collect($mealData['ingredients'] ?? [])
                 ->filter(fn($i) => !empty($i['inventory_item_id']))
                 ->toArray();
 
             $recipeName = $mealData['recipe_name'] ?: ($mealData['custom_recipe_name'] ?? null);
+
             if (empty($recipeName) && empty($ingredients)) continue;
 
-            // 1️⃣ Validate stock and update inventory
+            // Validate & update inventory
             foreach ($ingredients as $ingredient) {
                 $inventoryItem = InventoryItem::find($ingredient['inventory_item_id']);
                 $quantityUsed = $ingredient['quantity_used'] ?? 1;
 
                 if ($inventoryItem) {
-                    $availableQty = $inventoryItem->quantity;
-                    if ($quantityUsed > $availableQty) {
+                    if ($quantityUsed > $inventoryItem->quantity) {
                         throw ValidationException::withMessages([
-                            'meals' => "You only have {$availableQty} units of {$inventoryItem->name} available."
+                            'meals' => "You only have {$inventoryItem->quantity} units of {$inventoryItem->name} available."
                         ]);
                     }
 
-                    // Update inventory: subtract quantity & reserve
                     $inventoryItem->quantity -= $quantityUsed;
                     $inventoryItem->reserved_quantity += $quantityUsed;
                     $inventoryItem->save();
                 }
             }
 
-            // 2️⃣ Create meal and ingredients
+            // Create meal entry
             $meal = $mealPlan->meals()->create([
                 'date' => $mealData['date'],
                 'meal_type' => $mealData['meal_type'],
@@ -164,68 +161,47 @@ class MealPlanController extends Controller
                 $meal->ingredients()->createMany($ingredients);
             }
 
-            // 3️⃣ Optional: Notification
+            // ⭐ Add Notification WITH jump target
             $reminderDate = Carbon::parse($meal->date)->subDay();
+
             Notification::create([
-                'user_id' => Auth::id(),
-                'item_name' => $meal->recipe_name,
-                'message' => 'Reminder: You have "' . $meal->recipe_name . '" scheduled for ' . $meal->date,
+                'user_id'     => Auth::id(),
+                'item_name'   => $meal->recipe_name,
+                'message'     => 'Reminder: You have "' . $meal->recipe_name . '" scheduled for ' . $meal->date,
                 'expiry_date' => $reminderDate,
-                'status' => 'new',
+                'status'      => 'new',
+
+                // ⭐⭐ Added fields
+                'target_type' => 'mealplan',
+                'target_id'   => $mealPlan->id,
             ]);
         }
 
         return redirect()->route('mealplans.index')->with('success', 'Meal plan created successfully!');
     }
 
-
     public function edit(MealPlan $mealPlan)
     {
-        if (Auth::id() != $mealPlan->user_id) {
-            abort(403, 'Unauthorized action.');
-        }
+        if (Auth::id() != $mealPlan->user_id) abort(403);
 
         $inventoryItems = InventoryItem::where('user_id', Auth::id())
             ->where('status', '!=', 'expired')
             ->where(function ($query) {
                 $query->whereNull('reserved_quantity')
-                    ->orWhereColumn('quantity', '>', 'reserved_quantity'); // only show items with available stock
+                    ->orWhereColumn('quantity', '>', 'reserved_quantity');
             })
             ->get()
             ->map(function ($item) {
                 $reserved = $item->reserved_quantity ?? 0;
                 $available = max($item->quantity - $reserved, 0);
-
-                // Replace quantity with available
                 $item->quantity = $available;
                 return $item;
             });
-        // ✅ Same hardcoded recipes
+
         $recipes = [
-            [
-                'name' => 'Fried Rice',
-                'ingredients' => [
-                    ['name' => 'Rice', 'quantity_used' => 2],
-                    ['name' => 'Egg', 'quantity_used' => 1],
-                    ['name' => 'Oil', 'quantity_used' => 50],
-                ],
-            ],
-            [
-                'name' => 'Chicken Soup',
-                'ingredients' => [
-                    ['name' => 'Chicken', 'quantity_used' => 1],
-                    ['name' => 'Water', 'quantity_used' => 1],
-                    ['name' => 'Salt', 'quantity_used' => 1],
-                ],
-            ],
-            [
-                'name' => 'Salad Bowl',
-                'ingredients' => [
-                    ['name' => 'Lettuce', 'quantity_used' => 1],
-                    ['name' => 'Tomato', 'quantity_used' => 1],
-                    ['name' => 'Cucumber', 'quantity_used' => 1],
-                ],
-            ],
+            ['name' => 'Fried Rice', 'ingredients' => [['name' => 'Rice', 'quantity_used' => 2], ['name' => 'Egg', 'quantity_used' => 1], ['name' => 'Oil', 'quantity_used' => 1]]],
+            ['name' => 'Chicken Soup', 'ingredients' => [['name' => 'Chicken', 'quantity_used' => 1], ['name' => 'Water', 'quantity_used' => 1], ['name' => 'Salt', 'quantity_used' => 1]]],
+            ['name' => 'Salad Bowl', 'ingredients' => [['name' => 'Lettuce', 'quantity_used' => 1], ['name' => 'Tomato', 'quantity_used' => 1], ['name' => 'Cucumber', 'quantity_used' => 1]]],
         ];
 
         $mealPlan->load([
@@ -251,7 +227,7 @@ class MealPlanController extends Controller
             'meals' => 'array',
         ]);
 
-        // 1️⃣ Restore inventory from old meals
+        // restore inventory
         foreach ($mealPlan->meals as $meal) {
             foreach ($meal->ingredients as $ingredient) {
                 $item = InventoryItem::find($ingredient->inventory_item_id);
@@ -264,12 +240,12 @@ class MealPlanController extends Controller
             }
         }
 
-        // Delete old meals
+        // delete old meals
         $mealPlan->meals()->delete();
         $mealPlan->update(['week_start' => $request->week_start]);
 
-        // 2️⃣ Recreate new meals with inventory updates
         foreach ($request->input('meals', []) as $mealData) {
+
             $ingredients = collect($mealData['ingredients'] ?? [])
                 ->filter(fn($i) => !empty($i['inventory_item_id']))
                 ->toArray();
@@ -277,7 +253,6 @@ class MealPlanController extends Controller
             $recipeName = $mealData['recipe_name'] ?: ($mealData['custom_recipe_name'] ?? null);
             if (empty($recipeName) && empty($ingredients)) continue;
 
-            // Update inventory
             foreach ($ingredients as $ingredient) {
                 $item = InventoryItem::find($ingredient['inventory_item_id']);
                 $quantityUsed = $ingredient['quantity_used'] ?? 1;
@@ -287,7 +262,6 @@ class MealPlanController extends Controller
                             'meals' => "You only have {$item->quantity} units of {$item->name} available."
                         ]);
                     }
-
                     $item->quantity -= $quantityUsed;
                     $item->reserved_quantity += $quantityUsed;
                     $item->save();
@@ -308,18 +282,13 @@ class MealPlanController extends Controller
         return redirect()->route('mealplans.index')->with('success', 'Meal plan updated successfully!');
     }
 
-    // ✅ DELETE MEAL PLAN — includes releasing reserved quantities
     public function destroy(MealPlan $mealPlan)
     {
-        if (Auth::id() != $mealPlan->user_id) {
-            abort(403);
-        }
+        if (Auth::id() != $mealPlan->user_id) abort(403);
 
-        // Loop through all ingredients tied to this plan and restore reserved quantities
         foreach ($mealPlan->meals as $meal) {
             foreach ($meal->ingredients as $ingredient) {
                 $inventoryItem = $ingredient->inventoryItem;
-
                 if ($inventoryItem) {
                     $inventoryItem->quantity += $ingredient->quantity_used;
                     $inventoryItem->reserved_quantity -= $ingredient->quantity_used;
@@ -328,10 +297,8 @@ class MealPlanController extends Controller
             }
         }
 
-        // Delete the meal plan (this should also delete meals and ingredients if cascaded)
         $mealPlan->delete();
 
         return redirect()->route('mealplans.index')->with('success', 'Meal plan deleted and inventory restored.');
     }
-
 }
