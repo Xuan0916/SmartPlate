@@ -22,9 +22,6 @@
                                 {{ \Carbon\Carbon::parse($mealPlan->week_start)->addDays(6)->format('Y-m-d') }}
                             </span>
                         </h5>
-                        <a href="{{ route('mealplans.index') }}" class="btn btn-sm btn-secondary">
-                            &larr; Back to Index
-                        </a>
                     </div>
 
                     <hr class="mb-4">
@@ -47,6 +44,9 @@
                         </div>
 
                         <button type="submit" class="btn btn-success mt-3">Save Changes</button>
+                        <a href="{{ route('mealplans.index') }}" class="btn btn-secondary mt-3">
+                            Cancel
+                        </a>
                     </div>
                 </form>
 
@@ -83,7 +83,7 @@
         // Generate ingredient row HTML
         function createIngredientRow(mealIndex, idx, itemId = '', qtyUsed = '') {
             const selectedItem = inventoryItems.find(i => i.id == itemId);
-            const maxQty = selectedItem ? selectedItem.quantity : 0;
+            const maxQty = selectedItem ? selectedItem.quantity + Number(qtyUsed || 0) : 0; // <-- fix
             const placeholder = itemId 
                 ? (maxQty > 0 ? `Max: ${maxQty}` : 'Out of stock') 
                 : 'Select an ingredient';
@@ -122,6 +122,8 @@
             const endDate = new Date(startDate);
             endDate.setDate(startDate.getDate() + 6);
             weekRangeSpan.textContent = `${formatDate(startDate)} — ${formatDate(endDate)}`;
+            const today = new Date();
+            today.setHours(0,0,0,0); // ignore time for comparison
 
             for(let i=0;i<7;i++){
                 const current = new Date(startDate);
@@ -156,25 +158,35 @@
                         recipeOptions += `<option value="${r.name}" data-ingredients='${JSON.stringify(r.ingredients)}' ${r.name===recipeName?'selected':''}>${r.name}</option>`;
                     });
 
+                    // Determine if this meal is in the past
+                    const isPast = current < today;
+
                     row += `<td class="p-1">
                         <input type="hidden" name="meals[${mealIndex}][date]" value="${dateFormatted}">
                         <input type="hidden" name="meals[${mealIndex}][meal_type]" value="${type}">
+                        <input type="hidden" name="meals[${mealIndex}][recipe_name]" value="">
+                        <input type="hidden" name="meals[${mealIndex}][custom_recipe_name]" value="">
 
-                        <select name="meals[${mealIndex}][recipe_name]" class="form-select form-select-sm mb-2 text-xs recipe-select" data-meal-index="${mealIndex}">
+                        <select name="meals[${mealIndex}][recipe_name]" 
+                            class="form-select form-select-sm mb-2 text-xs recipe-select" 
+                            data-meal-index="${mealIndex}" ${isPast ? 'disabled' : ''}>
                             ${recipeOptions}
                         </select>
 
                         <input type="text" name="meals[${mealIndex}][custom_recipe_name]" 
                             class="form-control form-control-sm mb-2 text-xs custom-recipe-input" 
-                            placeholder="Custom Meal Plan (optional)" value="${customName}">
+                            placeholder="Custom Meal Plan (optional)" value="${customName}" ${isPast ? 'disabled' : ''}>
 
                         <div class="ingredient-list" data-meal-index="${mealIndex}">`;
 
                     ingredients.forEach((ing, idx)=>{
-                        row += createIngredientRow(mealIndex, idx, ing.inventory_item_id ?? '', ing.quantity_used ?? '');
+                        row += createIngredientRow(mealIndex, idx, ing.inventory_item_id ?? '', ing.quantity_used ?? '', isPast);
                     });
 
-                    row += `<button type="button" class="btn btn-sm btn-outline-primary add-ingredient mt-1" data-meal-index="${mealIndex}">+ Add Ingredient</button>
+                    row += `<button type="button" class="btn btn-sm btn-outline-primary add-ingredient mt-1" 
+                                data-meal-index="${mealIndex}" ${isPast ? 'disabled style="pointer-events:none; opacity:0.5;"' : ''}>
+                                + Add Ingredient
+                            </button>
                         </div>
                     </td>`;
                 });
@@ -183,7 +195,6 @@
                 tbody.insertAdjacentHTML('beforeend', row);
             }
         }
-
         // --- Add/remove ingredient dynamically ---
         weeklyPlan.addEventListener('click', function(e){
             if(e.target.classList.contains('add-ingredient')){

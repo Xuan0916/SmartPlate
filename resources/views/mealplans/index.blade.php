@@ -4,11 +4,11 @@
             {{ __('Plan Weekly Meals') }}
         </h2>
     </x-slot>
+
     <div class="py-12 max-w-7xl mx-auto sm:px-6 lg:px-8">
         @if ($mealPlans->isNotEmpty())
             <div class="flex justify-end mb-6">
-                <a href="{{ route('mealplans.create') }}"
-                class="btn btn-primary">
+                <a href="{{ route('mealplans.create') }}" class="btn btn-primary">
                     + Plan New Week
                 </a>
             </div>
@@ -42,7 +42,7 @@
                                     ✏️ Edit
                                 </a>
 
-                                <form action="{{ route('mealplans.destroy', $plan) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this meal plan?');">
+                                <form class="delete-mealplan-form" action="{{ route('mealplans.destroy', $plan) }}" method="POST">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-500 text-sm hover:text-red-700">
@@ -63,4 +63,32 @@
             </div>
         @endif
     </div>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const deleteForms = document.querySelectorAll('.delete-mealplan-form');
+
+            deleteForms.forEach(form => {
+                form.addEventListener('submit', function(e){
+                    e.preventDefault(); // prevent default submission
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: "This will permanently delete the meal plan!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Yes, delete it!',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit(); // submit form if confirmed
+                        }
+                    });
+                });
+            });
+        });
+    </script>
 </x-app-layout>
