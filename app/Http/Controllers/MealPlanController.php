@@ -40,6 +40,8 @@ class MealPlanController extends Controller
                     'message' => 'Reminder: You have "' . $meal->recipe_name . '" scheduled for ' . $meal->date,
                     'expiry_date' => $meal->date,
                     'status' => 'new',
+                    'target_type' => 'mealplan',          //  新增
+                    'target_id'   => $meal->meal_plan_id, // 新增
                 ]);
             }
         }
