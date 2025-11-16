@@ -13,11 +13,13 @@ class Notification extends Model
      * 允许批量写入的字段
      */
     protected $fillable = [
-        'user_id',      
+        'user_id',
         'item_name',
         'message',
         'expiry_date',
         'status',
+        'target_type',   
+        'target_id',     
     ];
 
     /**

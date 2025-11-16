@@ -22,7 +22,9 @@ class InventoryController extends Controller
         $today = Carbon::today();
         $threeDaysLater = $today->copy()->addDays(3);
 
-        // 1️⃣ Automatically track expired items as waste
+        /* ---------------------------------------------------
+         * 1️⃣ Automatically track EXPIRED items as waste
+         * ---------------------------------------------------*/
         $expiredItems = InventoryItem::where('user_id', $userId)
             ->whereNotNull('expiry_date')
             ->where('expiry_date', '<', $today)
@@ -30,37 +32,35 @@ class InventoryController extends Controller
             ->get();
 
         foreach ($expiredItems as $item) {
-            // Skip if quantity already 0
             if ($item->quantity <= 0) continue;
 
-            // Skip if already logged in waste table
-            if (Waste::where('inventory_item_id', $item->id)->exists()) continue;
+            if (!Waste::where('inventory_item_id', $item->id)->exists()) {
+                Waste::create([
+                    'user_id' => $userId,
+                    'inventory_item_id' => $item->id,
+                    'item_name' => $item->name,
+                    'category' => $item->category,
+                    'quantity_wasted' => $item->quantity,
+                    'unit' => $item->unit,
+                    'date_expired' => $item->expiry_date,
+                ]);
+            }
 
-            // Save new waste record
-            Waste::create([
-                'user_id' => $userId,
-                'inventory_item_id' => $item->id,
-                'item_name' => $item->name,
-                'category' => $item->category,
-                'quantity_wasted' => $item->quantity,
-                'unit' => $item->unit,
-                'date_expired' => $item->expiry_date,
-            ]);
-
-            // Mark expired
             $item->status = 'expired';
             $item->quantity = 0;
             $item->save();
         }
 
-
-        // 2️⃣ Notify about items expiring in 3 days
+        /* ---------------------------------------------------
+         * 2️⃣ Notify for items expiring in 3 days
+         * ---------------------------------------------------*/
         $expiringItems = InventoryItem::where('user_id', $userId)
             ->whereNotNull('expiry_date')
             ->whereBetween('expiry_date', [$today, $threeDaysLater])
             ->get();
 
         foreach ($expiringItems as $item) {
+
             $exists = Notification::where('user_id', $userId)
                 ->where('item_name', $item->name)
                 ->where('message', 'like', '%will expire%')
@@ -72,16 +72,21 @@ class InventoryController extends Controller
                 if ($daysLeft < 0) $daysLeft = abs($daysLeft);
 
                 Notification::create([
-                    'user_id' => $userId,
-                    'item_name' => $item->name,
-                    'message' => $item->name . ' will expire in ' . $daysLeft . ' day' . ($daysLeft > 1 ? 's' : ''),
+                    'user_id'     => $userId,
+                    'item_name'   => $item->name,
+                    'message'     => $item->name . ' will expire in ' . $daysLeft . ' day' . ($daysLeft > 1 ? 's' : ''),
                     'expiry_date' => now(),
-                    'status' => 'new',
+                    'status'      => 'new',
+                    /* ⭐ 新增精准跳转目标 */
+                    'target_type' => 'inventory',
+                    'target_id'   => $item->id,
                 ]);
             }
         }
 
-        // 3️⃣ Retrieve current inventory
+        /* ---------------------------------------------------
+         * 3️⃣ Retrieve inventory
+         * ---------------------------------------------------*/
         $items = InventoryItem::where('user_id', $userId)
             ->orderBy('expiry_date', 'asc')
             ->with('user')
@@ -89,6 +94,7 @@ class InventoryController extends Controller
 
         return view('managefoodinventory.inventory', compact('items'));
     }
+
 
     public function store(Request $request)
     {
@@ -109,7 +115,7 @@ class InventoryController extends Controller
             'name' => $validated['name'],
             'category' => $validated['category'] ?? null,
             'quantity' => $validated['quantity'],
-            'original_quantity' => $validated['quantity'], // track original purchased amount
+            'original_quantity' => $validated['quantity'],
             'unit' => $validated['unit'],
             'expiry_date' => $validated['expiry_date'] ?? null,
             'status' => 'available',
@@ -118,11 +124,13 @@ class InventoryController extends Controller
         return redirect()->route('inventory.index')->with('success', 'Item added successfully!');
     }
 
+
     public function edit($id)
     {
         $item = InventoryItem::findOrFail($id);
         return view('managefoodinventory.edit', compact('item'));
     }
+
 
     public function update(Request $request, $id)
     {
@@ -140,26 +148,26 @@ class InventoryController extends Controller
             'original_quantity' => $validated['quantity'],
         ]));
 
-        // Optional: update original_quantity if you want to reset it on update
-        // $item->original_quantity = $validated['quantity'];
-        // $item->save();
-
         return redirect()->route('inventory.index')->with('success', 'Item updated successfully!');
     }
+
 
     public function destroy($id)
     {
         $item = InventoryItem::findOrFail($id);
         Waste::where('inventory_item_id', $item->id)->delete();
         $item->delete();
+
         return redirect()->route('inventory.index')->with('success', 'Item deleted successfully!');
     }
+
 
     public function convertForm($id)
     {
         $item = InventoryItem::findOrFail($id);
         return view('managefoodinventory.convert_donation', compact('item'));
     }
+
 
     public function convertStore(Request $request, $id)
     {
@@ -168,12 +176,13 @@ class InventoryController extends Controller
         }
 
         $item = InventoryItem::findOrFail($id);
+
         $validated = $request->validate([
             'pickup_location' => 'required|string|max:255',
             'pickup_duration' => 'required|string|max:255',
         ]);
 
-        Donation::create([
+        $donation = Donation::create([
             'donor_id' => Auth::id(),
             'user_id' => Auth::id(),
             'inventory_item_id' => $item->id,
@@ -187,12 +196,15 @@ class InventoryController extends Controller
             'pickup_duration' => $validated['pickup_duration'],
         ]);
 
+        /* ⭐ 捐献成功通知（加 target） */
         Notification::create([
-            'user_id' => Auth::id(),
-            'item_name' => $item->name,
-            'message' => 'You have successfully donated "' . $item->name . '".',
+            'user_id'     => Auth::id(),
+            'item_name'   => $item->name,
+            'message'     => 'You have successfully donated "' . $item->name . '".',
             'expiry_date' => now(),
-            'status' => 'new',
+            'status'      => 'new',
+            'target_type' => 'donation',
+            'target_id'   => $donation->id,
         ]);
 
         $item->delete();
@@ -200,11 +212,13 @@ class InventoryController extends Controller
         return redirect()->route('inventory.index')->with('success', 'Item converted to donation successfully!');
     }
 
+
     public function markUsed($id)
     {
         $item = InventoryItem::findOrFail($id);
         $item->status = 'used';
         $item->save();
+
         return back()->with('success', 'Item marked as used successfully.');
     }
 
@@ -213,6 +227,7 @@ class InventoryController extends Controller
         $item = InventoryItem::findOrFail($id);
         $item->status = 'reserved';
         $item->save();
+
         return back()->with('success', 'Item reserved for meal successfully.');
     }
 }
