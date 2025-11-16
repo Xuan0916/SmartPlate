@@ -136,7 +136,9 @@ class InventoryController extends Controller
             'expiry_date' => 'nullable|date',
         ]);
 
-        $item->update($validated);
+        $item->update(array_merge($validated, [
+            'original_quantity' => $validated['quantity'],
+        ]));
 
         // Optional: update original_quantity if you want to reset it on update
         // $item->original_quantity = $validated['quantity'];
