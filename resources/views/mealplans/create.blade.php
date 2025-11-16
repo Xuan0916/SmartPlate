@@ -65,7 +65,6 @@
 
     {{-- ✅ JavaScript to manage dates and generate the 7-day plan --}}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <script>
     document.addEventListener('DOMContentLoaded', function () {
         const inventoryItems = @json($inventoryItems);
@@ -78,46 +77,43 @@
         const nextWeekBtn = document.getElementById('nextWeekBtn');
         const weeklyPlan = document.getElementById('weeklyPlan');
 
-        // Disable Prev Week button permanently
         prevWeekBtn.disabled = true;
         prevWeekBtn.classList.add('disabled', 'btn-secondary');
         prevWeekBtn.style.pointerEvents = 'none';
         prevWeekBtn.style.opacity = '0.5';
 
-        // ============================
-        // DATE UTILITIES
-        // ============================
         function formatDate(date) {
-            return date.toISOString().split('T')[0];
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         }
 
-        function getMonday(date) {
+        function getMonday(d) {
+            const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
             const day = date.getDay();
-            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-            return new Date(date.setDate(diff));
+            const diff = (day + 6) % 7;
+            date.setDate(date.getDate() - diff);
+            return date;
         }
 
-        // ============================
-        // ITEM OPTIONS (exclude expired)
-        // ============================
         const itemOptions = inventoryItems
-            .filter(item => item.status !== 'expired')
+            .filter(item => item.status !== 'expired' && item.quantity > 0)
             .sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date))
             .map(item => {
                 const expiryLabel = item.expiry_date ? ` (Exp: ${new Date(item.expiry_date).toISOString().split('T')[0]})` : '';
                 const unitLabel = item.unit ? ` ${item.unit}` : '';
-                return `<option value="${item.id}" data-available="${item.quantity}">
-                            ${item.name}${expiryLabel} - ${unitLabel}
+                const available = item.quantity ?? 0;
+                const total = item.original_quantity ?? 0;
+                return `<option value="${item.id}" data-available="${available}" data-original="${total}">
+                            ${item.name}${expiryLabel} - ${unitLabel} [Available: ${available} / Total: ${total}]
                         </option>`;
             }).join('');
 
-        // ============================
-        // GENERATE WEEKLY PLAN TABLE
-        // ============================
+        // GENERATE WEEKLY PLAN
         function generatePlan(startDate) {
             tbody.innerHTML = '';
             weekStartInput.value = formatDate(startDate);
-
             const endDate = new Date(startDate);
             endDate.setDate(startDate.getDate() + 6);
             weekRangeSpan.textContent = `${formatDate(startDate)} — ${formatDate(endDate)}`;
@@ -141,12 +137,9 @@
                     row += `<td class="p-1">
                         <input type="hidden" name="meals[${mealIndex}][date]" value="${dateFormatted}">
                         <input type="hidden" name="meals[${mealIndex}][meal_type]" value="${type}">
-
-                        <!-- Hidden inputs to always submit keys -->
                         <input type="hidden" name="meals[${mealIndex}][recipe_name]" value="">
                         <input type="hidden" name="meals[${mealIndex}][custom_recipe_name]" value="">
 
-                        <!-- Recipe Dropdown -->
                         <select name="meals[${mealIndex}][recipe_name]" 
                             class="form-select form-select-sm mb-2 text-xs recipe-select" 
                             data-meal-index="${mealIndex}" ${isPast ? 'disabled' : ''}>
@@ -158,7 +151,6 @@
                             @endforeach
                         </select>
 
-                        <!-- Optional Custom Recipe -->
                         <input type="text" 
                             name="meals[${mealIndex}][custom_recipe_name]" 
                             class="form-control form-control-sm mb-2 text-xs custom-recipe-input" 
@@ -166,11 +158,15 @@
 
                         <div class="ingredient-list" data-meal-index="${mealIndex}">
                             <button type="button" class="btn btn-sm btn-outline-primary add-ingredient mt-1" 
-                                data-meal-index="${mealIndex}" 
-                                ${isPast ? 'disabled style="pointer-events:none; opacity:0.5;"' : ''}>
+                                data-meal-index="${mealIndex}">
                                 + Add Ingredient
                             </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger reset-ingredients mt-1" 
+                                data-meal-index="${mealIndex}">
+                                Reset
+                            </button>
                         </div>
+
                     </td>`;
                 });
 
@@ -179,9 +175,6 @@
             }
         }
 
-        // ============================
-        // WEEK NAVIGATION
-        // ============================
         let currentWeekStart = getMonday(new Date());
 
         function navigateWeek(weeks) {
@@ -199,9 +192,7 @@
 
         generatePlan(currentWeekStart);
 
-        // ============================
-        // ADD / REMOVE INGREDIENTS
-        // ============================
+        // ADD / REMOVE / RESET INGREDIENTS
         weeklyPlan.addEventListener('click', function (e) {
             if (e.target.classList.contains('add-ingredient')) {
                 const button = e.target;
@@ -222,7 +213,7 @@
                         <input type="number"
                             name="meals[${mealIndex}][ingredients][${newIndex}][quantity_used]"
                             class="form-control form-control-sm text-xs text-center flex-shrink-0"
-                            style="width: 30%;" placeholder="Qty">
+                            style="width: 30%;" placeholder="Qty" min="1">
 
                         <button type="button" class="btn btn-sm btn-danger remove-ingredient flex-shrink-0">X</button>
                     </div>
@@ -233,11 +224,22 @@
             if (e.target.classList.contains('remove-ingredient')) {
                 e.target.closest('.mb-2').remove();
             }
+
+            if (e.target.classList.contains('reset-ingredients')) {
+                const ingredientListDiv = e.target.closest('.ingredient-list');
+                ingredientListDiv.querySelectorAll('.mb-2').forEach(el => el.remove());
+
+                const td = e.target.closest('td');
+                if (td) {
+                    const recipeSelect = td.querySelector('.recipe-select');
+                    if (recipeSelect) recipeSelect.value = '';
+                    const customInput = td.querySelector('.custom-recipe-input');
+                    if (customInput) customInput.value = '';
+                }
+            }
         });
 
-        // ============================
         // LIMIT QUANTITY BASED ON STOCK
-        // ============================
         weeklyPlan.addEventListener('change', function(e) {
             if (e.target.matches('select[name*="[inventory_item_id]"]')) {
                 const select = e.target;
@@ -246,14 +248,14 @@
 
                 const inventoryItem = inventoryItems.find(i => i.id == ingredientId);
                 const available = inventoryItem ? inventoryItem.quantity : 0;
+                const total = inventoryItem ? inventoryItem.original_quantity : 0;
 
                 qtyInput.setAttribute('max', available);
                 qtyInput.setAttribute('min', 1);
-                qtyInput.placeholder = available > 0 ? `Max: ${available}` : 'Out of stock';
+                qtyInput.placeholder = available > 0 ? `Max: ${available} / Total: ${total}` : 'Out of stock';
                 qtyInput.value = '';
             }
         });
-
 
         weeklyPlan.addEventListener('input', function (e) {
             if (e.target.matches('input[name*="[quantity_used]"]')) {
@@ -271,9 +273,7 @@
             }
         });
 
-        // ============================
-        // SWEETALERT WARNINGS — CUSTOM vs RECIPE
-        // ============================
+        // CUSTOM vs RECIPE ALERT
         weeklyPlan.addEventListener('input', async function (e) {
             if (e.target.classList.contains('custom-recipe-input')) {
                 const input = e.target;
@@ -296,7 +296,6 @@
                         recipeSelect.value = "";
                         const ingredientList = td.querySelector('.ingredient-list');
                         ingredientList.querySelectorAll('.mb-2').forEach(el => el.remove());
-                        Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Recipe cleared', showConfirmButton: false, timer: 1200 });
                     } else {
                         input.value = "";
                     }
@@ -317,87 +316,88 @@
                         icon: "warning",
                         showCancelButton: true,
                         confirmButtonText: "Yes, replace custom meal",
-                        cancelButtonText: "Cancel",
-                        confirmButtonColor: "#3085d6",
-                        cancelButtonColor: "#d33"
+                        cancelButtonText: "Cancel"
                     });
 
                     if (result.isConfirmed) {
                         customInput.value = "";
-                        Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Custom meal cleared', showConfirmButton: false, timer: 1200 });
                     } else {
                         select.value = "";
+                        return;
                     }
                 }
-            }
-        });
 
-        // ============================
-        // AUTO-FILL INGREDIENTS FROM RECIPE (ALL OR NONE)
-        // ============================
-        weeklyPlan.addEventListener('change', function (e) {
-            if (e.target.classList.contains('recipe-select')) {
-                const select = e.target;
+                // AUTO-FILL INGREDIENTS
                 const mealIndex = select.dataset.mealIndex;
-                const ingredientList = select.closest('td').querySelector('.ingredient-list');
+                const ingredientList = td.querySelector('.ingredient-list');
                 ingredientList.querySelectorAll('.mb-2').forEach(el => el.remove());
 
                 const selectedOption = select.selectedOptions[0];
                 const ingredientsData = selectedOption.dataset.ingredients ? JSON.parse(selectedOption.dataset.ingredients) : [];
+                let ingredientCounter = 0;
 
-                // ✅ Check all ingredients first — if any are insufficient, cancel entirely
-                const hasInsufficient = ingredientsData.some(ingredient => {
-                    const match = inventoryItems.find(i =>
-                        i.id == ingredient.inventory_item_id ||
-                        (ingredient.name && i.name.toLowerCase() === ingredient.name.toLowerCase())
-                    );
-                    const used = ingredient.quantity_used ?? 1;
-                    return !match || match.status === 'expired' || used > match.quantity;
-                });
+                for (const ingredient of ingredientsData) {
+                    const ingredientName = ingredient.name.toLowerCase();
+                    const requiredQty = ingredient.quantity_used ?? 1;
 
-                if (hasInsufficient) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Insufficient Ingredients',
-                        text: 'This recipe cannot be added because one or more ingredients are unavailable or insufficient.'
+                    const availableItems = inventoryItems
+                        .filter(i => i.name.toLowerCase() === ingredientName && i.status !== 'expired' && i.quantity > 0)
+                        .sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date));
+
+                    let remaining = requiredQty;
+                    let usedItems = [];
+
+                    for (const item of availableItems) {
+                        if (remaining <= 0) break;
+
+                        const take = Math.min(item.quantity, remaining);
+
+                        if (take <= 0) continue; // skip items with 0 stock
+
+                        usedItems.push({ id: item.id, quantity: take, available: item.quantity });
+                        remaining -= take;
+                    }
+
+                    if (remaining > 0) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Insufficient Ingredients',
+                            text: `Not enough ${ingredient.name} available for this recipe.`
+                        });
+                        select.value = '';
+                        return;
+                    }
+
+                    usedItems.forEach(used => {
+                        const row = `
+                            <div class="mb-2 d-flex align-items-center mt-1">
+                                <select name="meals[${mealIndex}][ingredients][${ingredientCounter}][inventory_item_id]" 
+                                    class="form-select form-select-sm me-1 text-xs" style="width:60%">
+                                    <option value="">Select Ingredient</option>
+                                    ${inventoryItems
+                                        .filter(i => i.status !== 'expired')
+                                        .map(i => `<option value="${i.id}" ${i.id == used.id ? 'selected' : ''}>${i.name}</option>`)
+                                        .join('')
+                                    }
+                                </select>
+                                <input type="number"
+                                    name="meals[${mealIndex}][ingredients][${ingredientCounter}][quantity_used]"
+                                    class="form-control form-control-sm text-xs text-center"
+                                    style="width:40%"
+                                    value="${used.quantity}"
+                                    min="1"
+                                    max="${used.available}"
+                                    placeholder="Max: ${used.available}">
+                            </div>
+                        `;
+                        ingredientList.insertAdjacentHTML('beforeend', row);
+                        ingredientCounter++;
                     });
-                    select.value = "";
-                    return; // 🚫 Stop here — don’t add any ingredients
                 }
-
-                // ✅ If all are fine, add them all
-                ingredientsData.forEach((ingredient, idx) => {
-                    const matchingItem = inventoryItems.find(i =>
-                        i.id == ingredient.inventory_item_id ||
-                        (ingredient.name && i.name.toLowerCase() === ingredient.name.toLowerCase())
-                    );
-
-                    const itemId = matchingItem.id;
-                    const available = matchingItem.quantity;
-                    const used = ingredient.quantity_used ?? 1;
-
-                    const row = `
-                        <div class="mb-2 d-flex align-items-center mt-1">
-                            <select name="meals[${mealIndex}][ingredients][${idx}][inventory_item_id]" 
-                                class="form-select form-select-sm me-1 text-xs" style="width:60%">
-                                <option value="">Select Ingredient</option>
-                                ${inventoryItems.filter(i => i.status != 'expired').map(item =>
-                                    `<option value="${item.id}" ${item.id == itemId ? 'selected' : ''}>${item.name}</option>`
-                                ).join('')}
-                            </select>
-                            <input type="number"
-                                name="meals[${mealIndex}][ingredients][${idx}][quantity_used]"
-                                class="form-control form-control-sm text-xs text-center"
-                                style="width:40%"
-                                value="${used}"
-                                min="1" max="${available}" placeholder="Max: ${available}">
-                        </div>
-                    `;
-                    ingredientList.insertAdjacentHTML('beforeend', row);
-                });
             }
         });
     });
     </script>
+
 
 </x-app-layout>

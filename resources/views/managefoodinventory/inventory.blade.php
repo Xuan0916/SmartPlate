@@ -135,17 +135,25 @@
                                             <td>{{ $item->category ?? '-' }}</td>
                                             <td>
                                                 <div>
-                                                    <strong>{{ $available }}</strong> / {{ $item->original_quantity }} {{ $item->unit }}
-                                                    @if ($reserved > 0)
-                                                        <div class="small text-muted mt-1">
-                                                            Reserved: {{ $reserved }} ({{ $percent }}%)
-                                                        </div>
+                                                    <strong>{{ $item->quantity }}</strong> / {{ $item->original_quantity }} {{ $item->unit }}
+
+                                                    @php
+                                                        // Calculate percentage used (based on quantity vs original_quantity)
+                                                        $usedPercent = $item->original_quantity > 0 
+                                                            ? round((($item->original_quantity - $item->quantity) / $item->original_quantity) * 100) 
+                                                            : 0;
+
+                                                        // Progress bar color
+                                                        $barColor = $usedPercent < 40 ? 'bg-success' : ($usedPercent < 80 ? 'bg-warning' : 'bg-danger');
+                                                    @endphp
+
+                                                    @if ($item->quantity < $item->original_quantity)
                                                         <div class="progress mt-1" style="height: 8px;">
                                                             <div 
                                                                 class="progress-bar {{ $barColor }}" 
                                                                 role="progressbar" 
-                                                                style="width: {{ $percent }}%; transition: width 0.3s ease;"
-                                                                aria-valuenow="{{ $percent }}" 
+                                                                style="width: {{ $usedPercent }}%; transition: width 0.3s ease;"
+                                                                aria-valuenow="{{ $usedPercent }}" 
                                                                 aria-valuemin="0" 
                                                                 aria-valuemax="100">
                                                             </div>
@@ -161,10 +169,10 @@
 
                                                 @if ($item->status === 'expired')
                                                     <span class="badge bg-danger text-dark">Expired</span>
-                                                @elseif ($reserved > 0 && $reserved < $total)
-                                                    <span class="badge bg-warning text-dark">Partially Reserved</span>
-                                                @elseif ($reserved >= $total)
-                                                    <span class="badge bg-secondary">Fully Reserved</span>
+                                                @elseif ($item->quantity === 0)
+                                                    <span class="badge bg-secondary">Fully Used</span>
+                                                @elseif ($item->quantity < $total)
+                                                    <span class="badge bg-warning text-dark">Partially Used</span>
                                                 @else
                                                     <span class="badge bg-success">Available</span>
                                                 @endif
@@ -183,7 +191,7 @@
                                                     </button>
                                                 </form>
 
-                                                @if ($item->status !== 'used' && $reserved < $item->quantity && $item->status !== 'expired')
+                                                @if ($item->status !== 'used' && $item->quantity !== 0 && $item->status !== 'expired')
                                                     <a href="{{ route('inventory.convert.form', $item->id) }}">
                                                         <button type="button" class="btn btn-outline-success btn-sm ms-1"
                                                             onclick="return confirm('Convert this item into a donation?')">
