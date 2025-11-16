@@ -155,11 +155,15 @@
                                             </td>
                                             <td>{{ $item->expiry_date ? $item->expiry_date->format('d/m/Y') : '-' }}</td>
                                             <td>
+                                                @php
+                                                    $total = $item->original_quantity ?? $item->quantity;
+                                                @endphp
+
                                                 @if ($item->status === 'expired')
                                                     <span class="badge bg-danger text-dark">Expired</span>
-                                                @elseif ($reserved > 0 && $reserved < $item->quantity)
+                                                @elseif ($reserved > 0 && $reserved < $total)
                                                     <span class="badge bg-warning text-dark">Partially Reserved</span>
-                                                @elseif ($reserved >= $item->quantity)
+                                                @elseif ($reserved >= $total)
                                                     <span class="badge bg-secondary">Fully Reserved</span>
                                                 @else
                                                     <span class="badge bg-success">Available</span>

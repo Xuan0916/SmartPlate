@@ -148,11 +148,37 @@ class MealPlanController extends Controller
             'meals' => 'required|array'
         ]);
 
+        // 🔍 STEP 1: Detect if user added at least ONE meal
+        $validMealExists = false;
+
+        foreach ($request->meals as $mealData) {
+            $ingredients = collect($mealData['ingredients'] ?? [])
+                ->filter(fn($i) => !empty($i['inventory_item_id']))
+                ->toArray();
+
+            $recipeName = $mealData['recipe_name'] ?: ($mealData['custom_recipe_name'] ?? null);
+
+            // A valid meal must have a recipe or at least one ingredient
+            if (!empty($recipeName) || !empty($ingredients)) {
+                $validMealExists = true;
+                break;
+            }
+        }
+
+        // ❌ If no meals added → stop request
+        if (!$validMealExists) {
+            return back()->withErrors([
+                'meals' => 'Please add at least one meal before saving the meal plan.'
+            ])->withInput();
+        }
+
+        // ✅ STEP 2: Create the Meal Plan
         $mealPlan = MealPlan::create([
             'user_id' => Auth::id(),
             'week_start' => $request->week_start,
         ]);
 
+        // Save meals as usual
         foreach ($request->meals as $mealData) {
 
             $ingredients = collect($mealData['ingredients'] ?? [])
@@ -192,25 +218,11 @@ class MealPlanController extends Controller
             if (!empty($ingredients)) {
                 $meal->ingredients()->createMany($ingredients);
             }
-
-            // ⭐ Add Notification WITH jump target
-            $reminderDate = Carbon::parse($meal->date)->subDay();
-
-            Notification::create([
-                'user_id'     => Auth::id(),
-                'item_name'   => $meal->recipe_name,
-                'message'     => 'Reminder: You have "' . $meal->recipe_name . '" scheduled for ' . $meal->date,
-                'expiry_date' => $reminderDate,
-                'status'      => 'new',
-
-                // ⭐⭐ Added fields
-                'target_type' => 'mealplan',
-                'target_id'   => $mealPlan->id,
-            ]);
         }
 
         return redirect()->route('mealplans.index')->with('success', 'Meal plan created successfully!');
     }
+
 
     public function edit(MealPlan $mealPlan)
     {
