@@ -72,27 +72,26 @@
 
                                         {{-- 🔥 Dynamic Go Button (donation / meal / inventory) --}}
                                         @php
-                                            switch ($note->target_type) {
-                                                case 'donation':
-                                                    $goLink = route('donation.index');
-                                                    break;
+                                            // default fallback
+                                            $goLink = route('inventory.index');
 
-                                                case 'meal':
+                                            if ($note->target_type === 'donation') {
+                                                $goLink = route('donation.index');
+
+                                            } elseif ($note->target_type === 'mealplan') {
+                                                // Make sure target_id exists
+                                                if ($note->target_id) {
+                                                    // Jump to specific Meal Plan detail page
+                                                    $goLink = route('mealplans.show', $note->target_id);
+                                                } else {
+                                                    // fallback to list
                                                     $goLink = route('mealplans.index');
-                                                    break;
-
-                                                case 'inventory':
-                                                    $goLink = route('inventory.index');
-                                                    break;
-
-                                                default:
-                                                    $goLink = route('inventory.index'); // fallback
+                                                }
                                             }
                                         @endphp
 
-                                        <a href="{{ $goLink }}"
-                                           class="ms-2 text-decoration-none text-primary fw-bold">
-                                            Go
+                                        <a href="{{ $goLink }}" class="ms-2 text-decoration-none text-primary fw-bold">Go
+
                                         </a>
                                     </td>
                                 </tr>
