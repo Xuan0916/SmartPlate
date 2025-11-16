@@ -107,7 +107,7 @@ class InventoryController extends Controller
             'category' => 'nullable|string|max:100',
             'quantity' => 'required|numeric|min:1',
             'unit' => 'required|string|max:50',
-            'expiry_date' => 'nullable|date',
+            'expiry_date' => 'required|date',
         ]);
 
         InventoryItem::create([

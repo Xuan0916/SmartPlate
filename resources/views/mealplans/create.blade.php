@@ -31,6 +31,10 @@
                     {{-- ✅ Weekly plan table --}}
                     <div id="weeklyPlan" class="mt-4">
                         <h5 class="fw-semibold mb-3">Plan Meals (7 Days)</h5>
+                        @if ($errors->has('meals'))
+                            <div>{{ $errors->first('meals') }}</div>
+                        @endif
+
                         <div class="table-responsive">
                             <table class="table table-bordered align-middle">
                                 <thead class="table-light">
