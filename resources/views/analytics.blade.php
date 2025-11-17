@@ -1,210 +1,165 @@
 <x-app-layout>
-    <div class="min-h-screen py-12 bg-gray-50">
+    <div class="min-h-screen py-10 bg-gray-50">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
-            
-            {{-- 1️⃣ KEY METRICS CARDS (Flexbox with FIXED Inline Widths and Styles) --}}
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 w-full">
-    
-                {{-- Monthly Food Saved Card --}}
-                <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #10b981;">
-                    {{-- CHANGED TEXT --}}
-                    <p class="text-sm font-medium text-gray-500">Food Saved (This Month) 🗓️</p>
-                    {{-- CHANGED VARIABLE --}}
-                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $monthlyFoodSaved ?? 0 }} Units</p>
-                    <p class="text-xs text-gray-400 mt-1">Via Usage & Donation</p>
+            {{-- FILTER UI --}}
+            <form method="GET" id="filterForm" class="mb-6 flex justify-end">
+                <div class="dropdown">
+                    <button 
+                        class="btn btn-outline-secondary dropdown-toggle flex items-center gap-2 px-4 py-2"
+                        type="button" 
+                        id="filterMenuButton" 
+                        data-bs-toggle="dropdown" 
+                        aria-expanded="false"
+                    >
+                        <span>{{ ucfirst($filter) }}</span>
+
+                    </button>
+
+                    <ul class="dropdown-menu" aria-labelledby="filterMenuButton">
+                        <li>
+                            <a class="dropdown-item {{ $filter === 'weekly' ? 'active' : '' }}" 
+                            href="{{ route('analytics.index', ['filter' => 'weekly']) }}">
+                                Weekly
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {{ $filter === 'monthly' ? 'active' : '' }}" 
+                            href="{{ route('analytics.index', ['filter' => 'monthly']) }}">
+                                Monthly
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </form>
+
+            {{-- TOP CARDS --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+                {{-- Food Saved --}}
+                <div class="bg-white p-5 shadow rounded-xl border-l-4 border-green-500">
+                    <p class="text-sm text-gray-500">Food Saved ({{ ucfirst($filter) }})</p>
+                    <p class="text-3xl font-bold mt-1">{{ $filteredFoodSaved ?? 0 }} Units</p>
+                    <p class="text-xs text-gray-400 mt-1">Used + Redeemed</p>
                 </div>
 
-                {{-- Monthly Waste Card --}}
-                <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #ef4444;">
-                    {{-- CHANGED TEXT --}}
-                    <p class="text-sm font-medium text-gray-500">Waste (This Month) 🗑️</p>
-                    {{-- CHANGED VARIABLE --}}
-                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $monthlyWaste ?? 0 }} Units</p>
-                    <p class="text-xs text-gray-400 mt-1">Expired items tracked</p>
+                {{-- Waste --}}
+                <div class="bg-white p-5 shadow rounded-xl border-l-4 border-red-500">
+                    <p class="text-sm text-gray-500">Waste ({{ ucfirst($filter) }})</p>
+                    <p class="text-3xl font-bold mt-1">{{ $filteredWaste ?? 0 }} Units</p>
+                    <p class="text-xs text-gray-400 mt-1">Expired Items</p>
                 </div>
 
-                {{-- Monthly Saved Percentage Card --}}
-                <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #3b82f6;">
-                    <p class="text-sm font-medium text-gray-500">Food Saved Percentage (This Month)</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $percentSavedMonthly ?? 0 }}%</p>
-                    <p class="text-xs text-gray-400 mt-1">Of total monthly activity</p>
+                {{-- Saved % --}}
+                <div class="bg-white p-5 shadow rounded-xl border-l-4 border-blue-500">
+                    <p class="text-sm text-gray-500">Food Saved % ({{ ucfirst($filter) }})</p>
+                    <p class="text-3xl font-bold mt-1">{{ $percentSavedFiltered ?? 0 }}%</p>
+                    <p class="text-xs text-gray-400 mt-1">Of total activity</p>
                 </div>
 
-                {{-- Total Donated Card --}}
-                <div class="bg-white p-5 shadow-lg rounded-xl border-l-4" style="border-color: #f59e0b;">
-                    <p class="text-sm font-medium text-gray-500">Total Donations Offered</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-1">{{ $totalDonated ?? 0 }} Units</p>
-                    <p class="text-xs text-gray-400 mt-1">Items put up for donation</p>
+                {{-- Donations --}}
+                <div class="bg-white p-5 shadow rounded-xl border-l-4 border-yellow-500">
+                    <p class="text-sm text-gray-500">Donated ({{ ucfirst($filter) }})</p>
+                    <p class="text-3xl font-bold mt-1">{{ $filteredDonated ?? 0 }} Units</p>
+                    <p class="text-xs text-gray-400 mt-1">Given away</p>
+                </div>
+            </div>
+
+            {{-- CHARTS --}}
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                {{-- Food Saved vs Waste --}}
+                <div class="bg-white p-6 shadow rounded-xl">
+                    <h2 class="text-xl font-semibold mb-4">Saved vs. Waste ({{ ucfirst($filter) }})</h2>
+
+                    @if(($filteredFoodSaved + $filteredWaste) == 0)
+                        <p class="text-gray-500 text-center py-20">No activity.</p>
+                    @else
+                        <canvas id="savedChart"></canvas>
+                    @endif
+                </div>
+
+                {{-- Donations --}}
+                <div class="bg-white p-6 shadow rounded-xl">
+                    <h2 class="text-xl font-semibold mb-4">Donations ({{ ucfirst($filter) }})</h2>
+
+                    @if($filteredDonated == 0)
+                        <p class="text-gray-500 text-center py-20">No donations.</p>
+                    @else
+                        <canvas id="donationsChart"></canvas>
+                    @endif
                 </div>
 
             </div>
 
-            {{-- 2️⃣ ROW 1: Food Saved & Donations Charts (2-column on MD and up) --}}
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full mb-8">
+            {{-- Waste By Category --}}
+            <div class="bg-white p-6 shadow rounded-xl mt-6">
+                <h2 class="text-xl font-semibold mb-4">Waste By Category (All Time)</h2>
 
-                {{-- Food Saved Chart (Left) --}}
-                <div class="bg-white p-6 shadow-lg rounded-xl w-full">
-                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Food Saved vs. Wasted (All Time)</h2>
-
-                    @if(($totalUsed ?? 0) + ($totalWaste ?? 0) + ($totalDonated ?? 0) == 0)
-                        <p class="text-gray-500 text-center py-20">
-                            You have no food items yet. Let's start a meal plan!
-                        </p>
-                    @else
-                        <canvas id="foodSavedChart" height="200"></canvas>
-                    @endif
-                </div>
-
-                {{-- Donations Chart (Right) --}}
-                <div class="bg-white p-6 shadow-lg rounded-xl w-full">
-                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Donations Overview</h2>
-
-                    @if(($totalDonated ?? 0) == 0)
-                        <p class="text-gray-500 text-center py-20">
-                            You have not donated any items yet. Start donating to see stats here!
-                        </p>
-                    @else
-                        <canvas id="donationChart" height="200"></canvas>
-                    @endif
-                </div>
-
+                @if($wasteByCategory->isEmpty())
+                    <p class="text-gray-500 text-center py-20">No waste recorded.</p>
+                @else
+                    <canvas id="categoryChart"></canvas>
+                @endif
             </div>
 
-            {{-- 3️⃣ ROW 2: Waste Category Chart & Placeholder (2-column on MD and up) --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                
-                {{-- Waste By Category Chart (Left) --}}
-                <div class="bg-white p-6 shadow-lg rounded-xl">
-                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Waste By Category Breakdown</h2>
-                    @if($wasteByCategory->isEmpty())
-                        <p class="text-gray-500 text-center py-20">
-                            No waste has been recorded yet.
-                        </p>
-                    @else
-                        <canvas id="wasteCategoryChart" height="200"></canvas>
-                    @endif
-                </div>
-
-                {{-- Quick Tip/CTA Card (Right) --}}
-                <div class="bg-white p-6 shadow-lg rounded-xl flex items-center justify-center">
-                    <div class="text-center">
-                        <h3 class="text-lg font-semibold text-green-600 mb-2">Need to Save More?</h3>
-                        <p class="text-gray-600">Check your <a href="{{ route('inventory.index') }}" class="font-medium text-indigo-600 hover:text-indigo-500">Inventory</a> for items near expiry!</p>
-                    </div>
-                </div>
-
-            </div>
         </div>
     </div>
 
-    {{-- Chart.js Scripts (Keep these outside the main content div but inside x-app-layout) --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    @if(($totalUsed ?? 0) + ($totalWaste ?? 0) + ($totalDonated ?? 0) > 0)
-    <script>
-        const percentSavedTotal = {{ $percentSavedTotal ?? 0 }};
-        const percentSavedMonthly = {{ $percentSavedMonthly ?? 0 }};
 
-        // --- Food Saved Percentage Chart ---
-        const ctxFoodSaved = document.getElementById('foodSavedChart').getContext('2d');
-        const foodSavedChart = new Chart(ctxFoodSaved, {
+    {{-- Saved vs Waste --}}
+    @if(($filteredFoodSaved + $filteredWaste) > 0)
+    <script>
+        new Chart(document.getElementById('savedChart'), {
             type: 'doughnut',
             data: {
-                labels: ['Saved', 'Lost/Wasted'],
+                labels: ['Saved', 'Wasted'],
                 datasets: [{
-                    data: [percentSavedTotal, 100 - percentSavedTotal],
-                    backgroundColor: ['#16a34a', '#ef4444'],
-                    borderWidth: 1
+                    data: [{{ $filteredFoodSaved }}, {{ $filteredWaste }}],
+                    backgroundColor: ['#16a34a', '#ef4444']
                 }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'bottom' },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.label + ': ' + context.parsed + '%';
-                            }
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Total Food Saved (%)'
-                    }
-                }
             }
         });
     </script>
     @endif
 
-    @if(($totalDonated ?? 0) > 0)
+    {{-- Donations --}}
+    @if($filteredDonated > 0)
     <script>
-        // --- Donations Chart ---
-        const ctxDonation = document.getElementById('donationChart').getContext('2d');
-        let donationChart = new Chart(ctxDonation, {
-            type: 'bar', // Bar chart for comparison
+        new Chart(document.getElementById('donationsChart'), {
+            type: 'bar',
             data: {
-                // Label for the X-axis (Total)
-                labels: ['All Time Donations'], 
-                datasets: [
-                    {
-                        label: 'Total Donated (Offered)', // The total quantity you offered
-                        data: [{{ $totalDonated ?? 0 }}],
-                        backgroundColor: '#facc15', // Yellow
-                    },
-                    {
-                        label: 'Total Redeemed (Claimed)', // The total quantity that was claimed
-                        data: [{{ $totalRedeemed ?? 0 }}],
-                        backgroundColor: '#10b981', // Emerald Green
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: { 
-                    legend: { position: 'top' }, // Show legend to distinguish bars
-                    title: { display: true, text: 'Total vs. Redeemed Donations (All Time)' }
-                },
-                scales: { 
-                    x: { stacked: false },
-                    y: { beginAtZero: true, stacked: false } 
-                }
+                labels: ['Donated', 'Redeemed'],
+                datasets: [{
+                    label: 'Units',
+                    data: [{{ $filteredDonated }}, {{ $filteredRedeemed }}],
+                    backgroundColor: ['#facc15', '#10b981']
+                }]
             }
         });
-
-        // --- Donations filter logic REMOVED ---
     </script>
     @endif
 
+    {{-- Category --}}
     @if(!$wasteByCategory->isEmpty())
     <script>
-        // --- Waste By Category Chart ---
-        const ctxCategory = document.getElementById('wasteCategoryChart').getContext('2d');
-        const wasteCategoryChart = new Chart(ctxCategory, {
+        new Chart(document.getElementById('categoryChart'), {
             type: 'pie',
             data: {
                 labels: [
-                    @foreach($wasteByCategory as $category)
-                        "{{ $category->category ?? 'Uncategorized' }}",
+                    @foreach($wasteByCategory as $cat)
+                        "{{ $cat->category }}",
                     @endforeach
                 ],
                 datasets: [{
-                    label: 'Units Wasted',
                     data: [
-                        @foreach($wasteByCategory as $category)
-                            {{ $category->total }},
+                        @foreach($wasteByCategory as $cat)
+                            {{ $cat->total }},
                         @endforeach
                     ],
-                    // Updated color palette for better contrast
-                    backgroundColor: [
-                        '#ef4444', '#f87171', '#fca5a5', '#dc2626', '#b91c1c', '#fca5a5', '#f87171', '#dc2626'
-                    ]
+                    backgroundColor: ['#ef4444','#dc2626','#f87171','#fca5a5','#991b1b']
                 }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { position: 'right' } }
             }
         });
     </script>
