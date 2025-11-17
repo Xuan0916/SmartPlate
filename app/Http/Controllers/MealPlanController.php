@@ -68,13 +68,12 @@ class MealPlanController extends Controller
         $inventoryItems = InventoryItem::where('user_id', Auth::id())
             ->where('status', '!=', 'expired')
             ->get()
-            
             ->map(function ($item) {
-                $reserved = $item->reserved_quantity ?? 0;
-                $available = max($item->original_quantity - $reserved, 0); // available = original - reserved
-                $item->quantity = $available; // available quantity for JS max
+                $item->available_quantity = $item->quantity; // NEW property for JS
                 return $item;
             });
+
+
 
         $recipes = [
             [
@@ -208,13 +207,11 @@ class MealPlanController extends Controller
     {
         if (Auth::id() != $mealPlan->user_id) abort(403);
 
-        $inventoryItems = InventoryItem::where('user_id', Auth::id())
+         $inventoryItems = InventoryItem::where('user_id', Auth::id())
             ->where('status', '!=', 'expired')
             ->get()
             ->map(function ($item) {
-                $reserved = $item->reserved_quantity ?? 0;
-                $available = max($item->original_quantity - $reserved, 0); // available = original - reserved
-                $item->quantity = $available; // available quantity for JS max
+                $item->available_quantity = $item->quantity; // NEW property for JS
                 return $item;
             });
 
