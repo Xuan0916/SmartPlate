@@ -46,31 +46,24 @@ class DashboardController extends Controller
         $endOfLastMonth = $previousMonth->endOfMonth()->copy(); // Get the last day of last month, and COPY it
                                                                 
         // Get last month's inventory items
-        $inventoryItemsLastMonth = InventoryItem::where('user_id', $userId)
-            ->whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])
-            ->get();
+        $inventoryItems = InventoryItem::where('user_id', $userId)->get();
 
-        // 🔥 Used quantity calculation (Keep this logic)
-        $totalUsedLastMonth = $inventoryItemsLastMonth->sum(function ($item) {
-            $originalQty = $item->original_quantity ?? $item->quantity;
-            $reservedQty = $item->reserved_quantity ?? 0;
-            $usedQty = $originalQty - $item->quantity - $reservedQty;
-            return max($usedQty, 0);
+        $foodUsedLastMonth = $inventoryItems->sum(function ($item) use ($startOfLastMonth, $endOfLastMonth) {
+            return $item->mealIngredients()
+                ->whereHas('meal', function ($q) use ($startOfLastMonth, $endOfLastMonth) {
+                    $q->whereBetween('date', [$startOfLastMonth, $endOfLastMonth]);
+                })
+                ->sum('quantity_used');
         });
 
-        // 🔥 Only redeemed or picked-up donations count
+        // Only redeemed or picked-up donations last month
         $totalRedeemedLastMonth = Donation::where('donor_id', $userId)
-            // ⬇️ Changed to updated_at for redemption/pickup date
-            ->whereBetween('updated_at', [$startOfLastMonth, $endOfLastMonth]) 
             ->whereIn('status', ['redeemed', 'picked_up'])
+            ->whereBetween('updated_at', [$startOfLastMonth, $endOfLastMonth])
             ->sum('quantity');
-        
-        // 🔥 Total food saved = used + redeemed
-        $foodSavedLastMonth = $totalUsedLastMonth + $totalRedeemedLastMonth;
 
-        if ($foodSavedLastMonth <= 0) {
-            $foodSavedLastMonth = 'No data';
-        }
+        $foodSavedLastMonth = $foodUsedLastMonth + $totalRedeemedLastMonth;
+
 
         // -----------------------------
         // 3️⃣ Total Meals Completed (All Time)

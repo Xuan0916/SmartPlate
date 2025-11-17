@@ -328,6 +328,7 @@
                 }
 
                 // AUTO-FILL INGREDIENTS
+                // AUTO-FILL INGREDIENTS
                 const mealIndex = select.dataset.mealIndex;
                 const ingredientList = td.querySelector('.ingredient-list');
                 ingredientList.querySelectorAll('.mb-2').forEach(el => el.remove());
@@ -336,6 +337,37 @@
                 const ingredientsData = selectedOption.dataset.ingredients ? JSON.parse(selectedOption.dataset.ingredients) : [];
                 let ingredientCounter = 0;
 
+                // Check first if all ingredients have enough stock
+                let insufficient = false;
+
+                for (const ingredient of ingredientsData) {
+                    const ingredientName = ingredient.name.toLowerCase();
+                    const requiredQty = ingredient.quantity_used ?? 1;
+
+                    const availableItems = inventoryItems
+                        .filter(i => i.name.toLowerCase() === ingredientName && i.status !== 'expired' && i.quantity > 0)
+                        .sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date));
+
+                    let totalAvailable = availableItems.reduce((sum, i) => sum + i.quantity, 0);
+
+                    if (totalAvailable < requiredQty) {
+                        insufficient = true;
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Insufficient Ingredients',
+                            text: `Not enough ${ingredient.name} available for this recipe.`
+                        });
+                        break; // stop checking further
+                    }
+                }
+
+                // If any ingredient is insufficient, do not fill
+                if (insufficient) {
+                    select.value = '';
+                    return;
+                }
+
+                // Otherwise, fill ingredients normally
                 for (const ingredient of ingredientsData) {
                     const ingredientName = ingredient.name.toLowerCase();
                     const requiredQty = ingredient.quantity_used ?? 1;
@@ -349,25 +381,13 @@
 
                     for (const item of availableItems) {
                         if (remaining <= 0) break;
-
                         const take = Math.min(item.quantity, remaining);
-
-                        if (take <= 0) continue; // skip items with 0 stock
-
+                        if (take <= 0) continue;
                         usedItems.push({ id: item.id, quantity: take, available: item.quantity });
                         remaining -= take;
                     }
 
-                    if (remaining > 0) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Insufficient Ingredients',
-                            text: `Not enough ${ingredient.name} available for this recipe.`
-                        });
-                        select.value = '';
-                        return;
-                    }
-
+                    // Add usedItems to DOM
                     usedItems.forEach(used => {
                         const row = `
                             <div class="mb-2 d-flex align-items-center mt-1">
@@ -394,6 +414,7 @@
                         ingredientCounter++;
                     });
                 }
+
             }
         });
     });
