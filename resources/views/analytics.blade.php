@@ -73,7 +73,10 @@
                     <h2 class="text-xl font-semibold mb-4">Saved vs. Waste ({{ ucfirst($filter) }})</h2>
 
                     @if(($filteredFoodSaved + $filteredWaste) == 0)
-                        <p class="text-gray-500 text-center py-20">No activity.</p>
+                        <p class="text-gray-500 text-center py-20">
+                            No activity yet — a great time to start planning your meals! 🌱  
+                            Every small step helps reduce waste.
+                        </p>
                     @else
                         <canvas id="savedChart"></canvas>
                     @endif
@@ -84,7 +87,10 @@
                     <h2 class="text-xl font-semibold mb-4">Donations ({{ ucfirst($filter) }})</h2>
 
                     @if($filteredDonated == 0)
-                        <p class="text-gray-500 text-center py-20">No donations.</p>
+                        <p class="text-gray-500 text-center py-20">
+                            No donations recorded yet.  
+                            Take your first step today — even a small donation can make a big difference! 💛
+                        </p>
                     @else
                         <canvas id="donationsChart"></canvas>
                     @endif
@@ -97,7 +103,11 @@
                 <h2 class="text-xl font-semibold mb-4">Waste By Category (All Time)</h2>
 
                 @if($wasteByCategory->isEmpty())
-                    <p class="text-gray-500 text-center py-20">No waste recorded.</p>
+                    <p class="text-gray-500 text-center py-20">
+                        No waste recorded — amazing! 🌟  
+                        Keep up the great habit of reducing food waste.
+                    </p>
+
                 @else
                     <canvas id="categoryChart"></canvas>
                 @endif
