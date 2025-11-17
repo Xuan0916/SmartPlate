@@ -172,7 +172,7 @@
                                                 @elseif ($item->quantity === 0)
                                                     <span class="badge bg-secondary">Fully Used</span>
                                                 @elseif ($item->quantity < $total)
-                                                    <span class="badge bg-warning text-dark">Partially Used</span>
+                                                    <span class="badge bg-warning text-dark">Partially Reserved</span>
                                                 @else
                                                     <span class="badge bg-success">Available</span>
                                                 @endif
