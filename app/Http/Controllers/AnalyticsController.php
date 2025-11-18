@@ -66,9 +66,9 @@ class AnalyticsController extends Controller
         $filteredUsed = $inventoryItems->sum(function ($item) use ($startDate, $endDate) {
             return $item->mealIngredients()
                 ->whereHas('meal', function ($q) use ($startDate, $endDate) {
-                    $q->where('date', '<', today());
-                    $q->whereBetween('date', [$startDate, $endDate]);
-                })
+                        $q->whereBetween('date', [$startDate, $endDate])
+                        ->whereDate('date', '<', today());
+                    })
                 ->sum('quantity_used');
         });
 
