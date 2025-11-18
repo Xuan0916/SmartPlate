@@ -11,18 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('notifications', function (Blueprint $table) {
+        Schema::create('wastes', function (Blueprint $table) {
             $table->id();
-
-            // ✅ 接收通知的用户（私人通知）
-            $table->foreignId('user_id')
-                  ->constrained('users')
-                  ->onDelete('cascade');
-
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('item_name');
-            $table->string('message');
-            $table->date('expiry_date')->nullable();
-            $table->enum('status', ['new', 'read'])->default('new');
+            $table->string('category')->nullable();
+            $table->integer('quantity_wasted')->default(0);
+            $table->string('unit')->nullable();
+            $table->date('date_expired');
             $table->timestamps();
         });
     }
@@ -32,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('notifications');
+        Schema::dropIfExists('wastes');
     }
 };

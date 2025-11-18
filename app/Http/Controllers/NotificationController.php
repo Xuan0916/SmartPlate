@@ -4,50 +4,56 @@ namespace App\Http\Controllers;
 
 use App\Models\Notification;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class NotificationController extends Controller
 {
-    /**
-     * Display all notifications (latest first)
-     */
+    // 🔔 List notifications
     public function index()
     {
-        $notifications = Notification::latest()->paginate(20);
+        $notifications = Notification::where('user_id', auth()->id())
+            ->latest()
+            ->get();
+
+        // Build dynamic link based on target_type
+        foreach ($notifications as $note) {
+            if ($note->target_type === 'inventory') {
+                $note->link = route('inventory.index');
+
+            } elseif ($note->target_type === 'donation') {
+                // Donation has item-level detail
+                $note->link = route('donation.index');
+
+            } elseif ($note->target_type === 'meal') {
+                // Meal plan page
+                $note->link = route('mealplans.index');
+
+            } else {
+                // Default fallback (previous behaviour)
+                $note->link = route('inventory.index');
+            }
+        }
+
         return view('managefoodinventory.notifications', compact('notifications'));
     }
 
-    /**
-     * Mark a single notification as read
-     */
+
+    // Mark single as read
     public function markAsRead($id)
     {
-        $notification = Notification::findOrFail($id);
+        $notification = Notification::where('user_id', auth()->id())->findOrFail($id);
+        $notification->update(['status' => 'read']);
 
-        // ✅ 支持两种字段情况：status 或 is_read
-        if (Schema::hasColumn('notifications', 'status')) {
-            $notification->update(['status' => 'read']);
-        } elseif (Schema::hasColumn('notifications', 'is_read')) {
-            $notification->update(['is_read' => true]);
-        }
-
-        return redirect()->route('notifications.index')
-            ->with('success', 'Notification marked as read.');
+        return back()->with('success', 'Notification marked as read.');
     }
 
-    /**
-     * Mark all notifications as read
-     */
+
+    // Mark all as read
     public function markAllAsRead()
     {
-        // ✅ 兼容两种列结构
-        if (Schema::hasColumn('notifications', 'status')) {
-            Notification::where('status', 'new')->update(['status' => 'read']);
-        } elseif (Schema::hasColumn('notifications', 'is_read')) {
-            Notification::where('is_read', false)->update(['is_read' => true]);
-        }
+        Notification::where('user_id', auth()->id())
+            ->where('status', 'new')
+            ->update(['status' => 'read']);
 
-        return redirect()->route('notifications.index')
-            ->with('success', 'All notifications marked as read.');
+        return back()->with('success', 'All notifications marked as read.');
     }
 }

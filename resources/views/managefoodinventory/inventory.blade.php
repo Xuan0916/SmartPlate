@@ -16,14 +16,13 @@
                            class="px-3 py-2 rounded-md {{ request()->routeIs('inventory.index') ? 'bg-blue-100 font-semibold text-blue-700' : 'text-gray-700 hover:bg-gray-50' }}">
                            Inventory
                         </a>
-                        <a href="{{ route('donation.index') }}"  class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Donation</a>
-                        <a href="{{route('browse.index')}}" class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Browse Food Items</a>
+                        <a href="{{ route('donation.index') }}" class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Donation</a>
+                        <a href="{{ route('browse.index') }}" class="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">Browse Food Items</a>
                     </nav>
                 </aside>
 
                 {{-- ✅ Main Content --}}
                 <div class="flex-1">
-                    {{-- Success message --}}
                     @if (session('success'))
                         <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                             {{ session('success') }}
@@ -31,7 +30,6 @@
                         </div>
                     @endif
 
-                    {{-- Validation errors --}}
                     @if ($errors->any())
                         <div class="alert alert-danger mb-4">
                             <ul class="mb-0">
@@ -42,87 +40,17 @@
                         </div>
                     @endif
 
-                    {{-- Card Container --}}
                     <div class="bg-white shadow-sm sm:rounded-lg p-6">
-                        {{-- Header Row --}}
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-lg font-semibold">{{ __('Food Inventory') }}</h3>
-
-                            {{-- ✅ 点击显示/隐藏表单 --}}
                             <button class="btn btn-primary btn-sm" id="toggleAddForm" type="button">
                                 <i class="bi bi-plus-lg"></i> Add new item
                             </button>
                         </div>
 
-                        {{-- ✅ Inventory Table --}}
-                        <div class="table-responsive mb-4">
-                            <table class="table align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Item Name</th>
-                                        <th>Category</th> {{-- ✅ 新增 --}}
-                                        <th>Quantity</th>
-                                        <th>Expiry Date</th>
-                                        <th>Status</th>
-                                        <th class="text-end">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse ($items as $item)
-                                        <tr>
-                                            <td>{{ $item->name }}</td>
-                                            <td>{{ $item->category ?? '-' }}</td> {{-- ✅ 显示分类 --}}
-                                            <td>{{ $item->quantity }} {{ $item->unit }}</td>
-                                            <td>{{ $item->expiry_date ? $item->expiry_date->format('d/m/Y') : '-' }}</td>
-                                            <td>
-                                                @if ($item->status === 'available')
-                                                    <span class="badge bg-success">Available</span>
-                                                @elseif ($item->status === 'used')
-                                                    <span class="badge bg-secondary">Used</span>
-                                                @elseif ($item->status === 'reserved')
-                                                    <span class="badge bg-warning text-dark">Reserved</span>
-                                                @elseif ($item->status === 'expired')
-                                                    <span class="badge bg-danger text-dark">Expired</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-end">
-                                                {{-- Edit --}}
-                                                <a href="{{ route('inventory.edit', $item->id) }}" class="btn btn-outline-primary btn-sm me-1">
-                                                    Edit
-                                                </a>
-                                                {{-- Delete --}}
-                                                <form action="{{ route('inventory.destroy', $item->id) }}" method="POST" class="inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-outline-danger btn-sm"
-                                                        onclick="return confirm('Delete this item?')">
-                                                        Delete
-                                                    </button>
-                                                </form>
-
-                                                {{-- Convert --}}
-                                                @if ($item->status !== 'used' && $item->status !== 'reserved')
-                                                    <a href="{{ route('inventory.convert.form', $item->id) }}" class="text-success ms-2">
-                                                        <button type="submit" class="btn btn-outline-success btn-sm"
-                                                            onclick="return confirm('Do you want to convert this item into a donation?')">
-                                                            Donate
-                                                        </button>
-                                                    </a>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="6" class="text-center text-muted py-3">No items found.</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {{-- ✅ Add Item Form（默认隐藏） --}}
+                        {{-- Add Item Form (unchanged) --}}
                         <div id="add-new-item" class="mt-4" style="display: none;">
-                            <div class="card">
+                            <div class="card mb-1">
                                 <div class="card-body">
                                     <h6 class="card-title mb-3">{{ __('Add Item') }}</h6>
                                     <form method="POST" action="{{ route('inventory.store') }}">
@@ -130,10 +58,8 @@
                                         <div class="row g-2">
                                             <div class="col-md-4">
                                                 <label class="form-label">Item name</label>
-                                                <input type="text" name="name" class="form-control" placeholder="e.g., Milk" required>
+                                                <input type="text" name="name" class="form-control" required>
                                             </div>
-
-                                            {{-- ✅ 新增分类下拉菜单 --}}
                                             <div class="col-md-3">
                                                 <label class="form-label">Category</label>
                                                 <select name="category" class="form-select" required>
@@ -148,10 +74,9 @@
                                                     <option value="Other">Other</option>
                                                 </select>
                                             </div>
-
                                             <div class="col-md-2">
                                                 <label class="form-label">Quantity</label>
-                                                <input type="number" name="quantity" class="form-control" placeholder="e.g., 1" required>
+                                                <input type="number" name="quantity" class="form-control" required>
                                             </div>
                                             <div class="col-md-2">
                                                 <label class="form-label">Unit</label>
@@ -165,7 +90,7 @@
                                             </div>
                                             <div class="col-md-3">
                                                 <label class="form-label">Expiry date</label>
-                                                <input type="date" name="expiry_date" class="form-control">
+                                                <input type="date" name="expiry_date" class="form-control" min="{{ date('Y-m-d') }}">
                                             </div>
                                         </div>
 
@@ -178,25 +103,130 @@
                             </div>
                         </div>
 
-                    </div> {{-- end card --}}
-                </div> {{-- end main --}}
+                        {{-- ✅ Inventory Table --}}
+                        <div class="table-responsive mb-4">
+                            <table class="table align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Item Name</th>
+                                        <th>Category</th>
+                                        <th>Quantity</th>
+                                        <th>Expiry Date</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse ($items as $item)
+                                        @php
+                                            $reserved = $item->reserved_quantity ?? 0;
+                                            $available = $item->quantity;  
+                                            $percent = $item->original_quantity > 0 
+                                                ? round(($reserved / $item->original_quantity) * 100) 
+                                                : 0;
+
+
+                                            // Color logic for progress bar
+                                            $barColor = $percent < 40 ? 'bg-success' : ($percent < 80 ? 'bg-warning' : 'bg-danger');
+                                        @endphp
+
+                                        <tr>
+                                            <td>{{ $item->name }}</td>
+                                            <td>{{ $item->category ?? '-' }}</td>
+                                            <td>
+                                                <div>
+                                                    <strong>{{ $item->quantity }}</strong> / {{ $item->original_quantity }} {{ $item->unit }}
+
+                                                    @php
+                                                        // Calculate percentage used (based on quantity vs original_quantity)
+                                                        $usedPercent = $item->original_quantity > 0 
+                                                            ? round((($item->original_quantity - $item->quantity) / $item->original_quantity) * 100) 
+                                                            : 0;
+
+                                                        // Progress bar color
+                                                        $barColor = $usedPercent < 40 ? 'bg-success' : ($usedPercent < 80 ? 'bg-warning' : 'bg-danger');
+                                                    @endphp
+
+                                                    @if ($item->quantity < $item->original_quantity)
+                                                        <div class="progress mt-1" style="height: 8px;">
+                                                            <div 
+                                                                class="progress-bar {{ $barColor }}" 
+                                                                role="progressbar" 
+                                                                style="width: {{ $usedPercent }}%; transition: width 0.3s ease;"
+                                                                aria-valuenow="{{ $usedPercent }}" 
+                                                                aria-valuemin="0" 
+                                                                aria-valuemax="100">
+                                                            </div>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                            <td>{{ $item->expiry_date ? $item->expiry_date->format('d/m/Y') : '-' }}</td>
+                                            <td>
+                                                @php
+                                                    $total = $item->original_quantity ?? $item->quantity;
+                                                @endphp
+
+                                                @if ($item->status === 'expired')
+                                                    <span class="badge bg-danger text-dark">Expired</span>
+                                                @elseif ($item->quantity === 0)
+                                                    <span class="badge bg-secondary">Fully Used</span>
+                                                @elseif ($item->quantity < $total)
+                                                    <span class="badge bg-warning text-dark">Partially Reserved</span>
+                                                @else
+                                                    <span class="badge bg-success">Available</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-end">
+                                                <a href="{{ route('inventory.edit', $item->id) }}" class="btn btn-outline-primary btn-sm me-1">
+                                                    Edit
+                                                </a>
+
+                                                <form action="{{ route('inventory.destroy', $item->id) }}" method="POST" class="inline d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                        onclick="return confirm('Delete this item?')">
+                                                        Delete
+                                                    </button>
+                                                </form>
+
+                                                @if ($item->status !== 'used' && $item->quantity !== 0 && $item->status !== 'expired')
+                                                    <a href="{{ route('inventory.convert.form', $item->id) }}">
+                                                        <button type="button" class="btn btn-outline-success btn-sm ms-1"
+                                                            onclick="return confirm('Convert this item into a donation?')">
+                                                            Donate
+                                                        </button>
+                                                    </a>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted py-3">No items found.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+
+                            </table>
+                        </div>      
+
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    {{-- ✅ Toggle Add Form Script --}}
+    {{-- Toggle Add Form --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const toggleButton = document.getElementById('toggleAddForm');
             const formSection = document.getElementById('add-new-item');
-
             toggleButton.addEventListener('click', function() {
-                const isVisible = formSection.style.display === 'block';
-                formSection.style.display = isVisible ? 'none' : 'block';
+                formSection.style.display = formSection.style.display === 'block' ? 'none' : 'block';
             });
         });
     </script>
 
-    {{-- Bootstrap JS for dismissible alerts --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </x-app-layout>
